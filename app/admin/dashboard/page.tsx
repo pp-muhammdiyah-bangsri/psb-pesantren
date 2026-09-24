@@ -1286,6 +1286,133 @@ function AdminDashboardContent() {
           </div>
         )}
 
+        {/* ═══ TAB 5: PROGRAM UNGGULAN ═══ */}
+        {activeTab === "program" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border flex items-center justify-between flex-wrap gap-4" style={{ borderColor: "#f0f0f0" }}>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">Kelola Program Unggulan</h2>
+                <p className="text-xs text-gray-500">Program yang tampil di halaman utama website — bisa diaktifkan/nonaktifkan kapan saja</p>
+              </div>
+              <button onClick={() => setShowProgramForm(!showProgramForm)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm"
+                style={{ background: primaryColor }}>
+                <Plus size={16} />
+                <span>{showProgramForm ? "Tutup Form" : "Tambah Program Baru"}</span>
+              </button>
+            </div>
+
+            {showProgramForm && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-green-200">
+                <h3 className="font-bold text-sm text-gray-900 mb-4 pb-2 border-b">Tambah Program Unggulan Baru</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nama Program *</label>
+                    <input type="text" value={programForm.nama} onChange={(e) => setProgramForm({...programForm, nama: e.target.value})}
+                      placeholder="Contoh: Tahfidz Al-Quran" className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Nomor Urutan Tampil</label>
+                    <input type="number" value={programForm.urutan} onChange={(e) => setProgramForm({...programForm, urutan: e.target.value})}
+                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Deskripsi Singkat</label>
+                    <textarea rows={2} value={programForm.deskripsi} onChange={(e) => setProgramForm({...programForm, deskripsi: e.target.value})}
+                      placeholder="Jelaskan keunggulan program ini secara singkat..."
+                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-2">Pilih Ikon Emoji</label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {ICON_PRESETS.map(ic => (
+                        <button key={ic} onClick={() => setProgramForm({...programForm, icon: ic})}
+                          className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center border-2 transition-all ${programForm.icon === ic ? "border-green-600 bg-green-50 scale-110" : "border-gray-200 hover:border-gray-400"}`}>{ic}</button>
+                      ))}
+                    </div>
+                    <input type="text" value={programForm.icon} onChange={(e) => setProgramForm({...programForm, icon: e.target.value})}
+                      placeholder="Atau ketik emoji sendiri..." className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">Warna Kartu</label>
+                    <div className="flex items-center gap-3">
+                      <input type="color" value={programForm.warna} onChange={(e) => setProgramForm({...programForm, warna: e.target.value})}
+                        className="w-10 h-10 rounded-lg border cursor-pointer" />
+                      <div className="flex flex-wrap gap-2">
+                        {["#0f4c1e","#1e3a8a","#7c3aed","#b91c1c","#c8a84b","#0891b2"].map(c => (
+                          <button key={c} onClick={() => setProgramForm({...programForm, warna: c})}
+                            className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
+                            style={{ background: c, borderColor: programForm.warna === c ? "#111" : "transparent" }} />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">{programForm.warna}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
+                  <button onClick={() => setShowProgramForm(false)} className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200">Batal</button>
+                  <button onClick={async () => {
+                    if (!programForm.nama.trim()) return alert("Nama program wajib diisi!");
+                    const r = await fetch("/api/program", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({...programForm, urutan: parseInt(programForm.urutan)||99}) });
+                    const d = await r.json();
+                    if (d.ok) { setProgramList(prev => [...prev, d.data].sort((a,b)=>a.urutan-b.urutan)); setProgramForm({nama:"",deskripsi:"",icon:"⭐",warna:"#0f4c1e",urutan:"1"}); setShowProgramForm(false); }
+                    else alert("Gagal: " + d.error);
+                  }} className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm" style={{ background: primaryColor }}>
+                    Simpan Program
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loadingProgram ? (
+              <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{ borderColor: primaryColor }} /></div>
+            ) : programList.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-2xl border" style={{ borderColor: "#f0f0f0" }}>
+                <div className="text-5xl mb-3">📚</div>
+                <p className="font-bold text-gray-700">Belum ada program unggulan</p>
+                <p className="text-sm text-gray-400 mt-1">Klik tombol di atas untuk menambah program</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {programList.map((prog) => (
+                  <div key={prog.id}
+                    className={`bg-white rounded-2xl p-5 shadow-sm border flex flex-col gap-3 ${prog.is_aktif ? "" : "opacity-60"}`}
+                    style={{ borderColor: "#f0f0f0", borderLeft: `4px solid ${prog.warna}` }}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ background: `${prog.warna}15` }}>{prog.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-sm text-gray-900 leading-tight truncate">{prog.nama}</h4>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${prog.is_aktif ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {prog.is_aktif ? "✓ Aktif" : "Nonaktif"}
+                        </span>
+                      </div>
+                    </div>
+                    {prog.deskripsi && <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{prog.deskripsi}</p>}
+                    <div className="flex gap-2 pt-2 border-t">
+                      <button onClick={async () => {
+                        const r = await fetch("/api/program", { method: "PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: prog.id, is_aktif: !prog.is_aktif}) });
+                        const d = await r.json();
+                        if (d.ok) setProgramList(prev => prev.map(p => p.id === prog.id ? {...p, is_aktif: !p.is_aktif} : p));
+                      }} className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                      style={{ background: prog.is_aktif ? "#fef9c3" : "#dcfce7", color: prog.is_aktif ? "#a16207" : "#15803d" }}>
+                        {prog.is_aktif ? "Nonaktifkan" : "Aktifkan"}
+                      </button>
+                      <button onClick={async () => {
+                        if (!confirm(`Hapus program "${prog.nama}"?`)) return;
+                        const r = await fetch("/api/program", { method: "DELETE", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: prog.id}) });
+                        const d = await r.json();
+                        if (d.ok) setProgramList(prev => prev.filter(p => p.id !== prog.id));
+                      }} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
       </main>
 
       {/* ─── Modal Verifikasi Pendaftar ─── */}
