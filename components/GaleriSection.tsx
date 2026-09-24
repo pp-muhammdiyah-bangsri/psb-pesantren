@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import { useState } from "react";
-import { X, ChevronLeft, ChevronRight, Images } from "lucide-react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface GaleriItem {
   id: number;
@@ -12,6 +12,36 @@ interface GaleriItem {
 interface GaleriSectionProps {
   galeri: GaleriItem[];
   config: Record<string, string>;
+}
+
+/**
+ * Konversi berbagai format Google Drive URL menjadi URL gambar langsung.
+ * Format yang didukung:
+ *   - https://drive.google.com/file/d/FILE_ID/view?...
+ *   - https://drive.google.com/open?id=FILE_ID
+ *   - https://drive.google.com/uc?id=FILE_ID
+ *   - https://lh3.googleusercontent.com/d/FILE_ID  (sudah benar)
+ */
+function toDirectImageUrl(url: string): string {
+  if (!url) return url;
+
+  // Sudah format langsung
+  if (url.includes("lh3.googleusercontent.com")) return url;
+
+  // Format: /file/d/FILE_ID/
+  const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileMatch) {
+    return `https://lh3.googleusercontent.com/d/${fileMatch[1]}`;
+  }
+
+  // Format: ?id=FILE_ID atau &id=FILE_ID
+  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idMatch) {
+    return `https://lh3.googleusercontent.com/d/${idMatch[1]}`;
+  }
+
+  // Bukan Google Drive, kembalikan apa adanya
+  return url;
 }
 
 export default function GaleriSection({ galeri, config }: GaleriSectionProps) {
@@ -49,9 +79,13 @@ export default function GaleriSection({ galeri, config }: GaleriSectionProps) {
               style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.12)" }}
             >
               <img
-                src={item.foto_url}
+                src={toDirectImageUrl(item.foto_url)}
                 alt={item.judul || "Galeri"}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                onError={(e) => {
+                  // Fallback jika gambar gagal load
+                  (e.target as HTMLImageElement).src = `https://placehold.co/400x300/${primary.replace("#","")}/${accent.replace("#","")}?text=Galeri`;
+                }}
               />
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3"
                 style={{ background: `linear-gradient(to top, ${primary}cc, transparent)` }}>
@@ -77,7 +111,7 @@ export default function GaleriSection({ galeri, config }: GaleriSectionProps) {
             </button>
             <div className="max-w-4xl max-h-[85vh] mx-16" onClick={(e) => e.stopPropagation()}>
               <img
-                src={galeri[lightbox].foto_url}
+                src={toDirectImageUrl(galeri[lightbox].foto_url)}
                 alt={galeri[lightbox].judul || ""}
                 className="max-w-full max-h-[80vh] object-contain rounded-lg"
               />
