@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase";
 
 export async function GET() {
@@ -22,6 +23,9 @@ export async function PUT(req: Request) {
     for (const { key, value } of updates) {
       await admin.from("pengaturan_psb").upsert({ key, value });
     }
+    // Invalidate halaman utama agar perubahan langsung tampil
+    revalidatePath("/");
+    revalidatePath("/galeri");
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error";

@@ -1,10 +1,14 @@
-import { createAdminClient } from "@/lib/supabase";
+﻿import { createAdminClient } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import GelombangSection from "@/components/GelombangSection";
 import GaleriSection from "@/components/GaleriSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import Footer from "@/components/Footer";
+
+// Selalu fetch data terbaru dari Supabase - tidak pakai cache
+export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
 async function getConfig() {
   try {
