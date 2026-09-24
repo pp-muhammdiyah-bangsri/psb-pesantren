@@ -1,0 +1,142 @@
+{
+  "admin_psb": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password_hash": "$2b$10$Dkzse.Po9oRc102fmuROQ.gwe73mcPs8z091BTeeAKTnzDWPVHxt6",
+      "nama": "Administrator Pondok",
+      "created_at": "2026-09-24T15:50:18.070Z"
+    }
+  ],
+  "pengaturan_psb": [
+    {
+      "key": "nama_pesantren",
+      "value": "Pondok Pesantren Al-Ikhlas"
+    },
+    {
+      "key": "tagline",
+      "value": "Mencetak Generasi Qur'ani, Berakhlak Mulia & Mandiri"
+    },
+    {
+      "key": "deskripsi",
+      "value": "Pondok Pesantren Modern dengan kurikulum terpadu Tahfidzul Qur'an, Dirasah Islamiyah, dan Kurikulum Nasional."
+    },
+    {
+      "key": "warna_primer",
+      "value": "#0f4c1e"
+    },
+    {
+      "key": "warna_aksen",
+      "value": "#c8a84b"
+    },
+    {
+      "key": "no_wa_admin",
+      "value": "081234567890"
+    },
+    {
+      "key": "alamat",
+      "value": "Jl. Pesantren No. 1, Jawa Timur"
+    },
+    {
+      "key": "email",
+      "value": "psb@pesantren-alikhlas.sch.id"
+    },
+    {
+      "key": "tahun_berdiri",
+      "value": "1985"
+    },
+    {
+      "key": "jumlah_santri",
+      "value": "1200+"
+    },
+    {
+      "key": "program_pendidikan",
+      "value": "Tahfidz Al-Qur'an, Madrasah Tsanawiyah, Madrasah Aliyah"
+    }
+  ],
+  "gelombang_psb": [
+    {
+      "id": 1,
+      "nama": "Gelombang 1 - TA 2026/2027",
+      "tanggal_buka": "2026-01-01",
+      "tanggal_tutup": "2026-06-30",
+      "kuota": 150,
+      "biaya_pendaftaran": 250000,
+      "keterangan": "Jalur Reguler & Beasiswa Prestasi Tahfidz",
+      "is_aktif": true,
+      "created_at": "2026-09-24T15:50:18.071Z"
+    }
+  ],
+  "pendaftar": [
+    {
+      "id": 1,
+      "nomor_registrasi": "PSB-2026-0001",
+      "nama_lengkap": "Ahmad Fauzi Rahman",
+      "nama_panggilan": "Fauzi",
+      "jenis_kelamin": "L",
+      "tempat_lahir": "Surabaya",
+      "tanggal_lahir": "2012-05-14",
+      "asal_sekolah": "SDN 1 Surabaya",
+      "jurusan": "Madrasah Tsanawiyah (MTs)",
+      "nama_ayah": "H. Abdullah",
+      "pekerjaan_ayah": "Wiraswasta",
+      "nama_ibu": "Hj. Maryam",
+      "pekerjaan_ibu": "Guru",
+      "no_hp_wali": "081234567890",
+      "alamat": "Jl. Rungkut Asri No. 12, Surabaya, Jawa Timur",
+      "status": "diterima",
+      "gelombang_id": 1,
+      "created_at": "2026-09-24T15:50:18.071Z"
+    },
+    {
+      "id": 2,
+      "nomor_registrasi": "PSB-2026-0002",
+      "nama_lengkap": "Siti Nur Aisyah",
+      "nama_panggilan": "Aisyah",
+      "jenis_kelamin": "P",
+      "tempat_lahir": "Malang",
+      "tanggal_lahir": "2010-09-21",
+      "asal_sekolah": "SMP Negeri 3 Malang",
+      "jurusan": "Madrasah Aliyah (MA) IPA",
+      "nama_ayah": "Drs. Usman",
+      "pekerjaan_ayah": "PNS",
+      "nama_ibu": "Khadijah",
+      "pekerjaan_ibu": "Ibu Rumah Tangga",
+      "no_hp_wali": "081398765432",
+      "alamat": "Jl. Ijen No. 45, Malang, Jawa Timur",
+      "status": "diterima",
+      "gelombang_id": 1,
+      "created_at": "2026-09-24T15:50:18.071Z"
+    },
+    {
+      "id": 3,
+      "nomor_registrasi": "PSB-2026-0003",
+      "nama_lengkap": "Muhammad Rizqi Pratama",
+      "nama_panggilan": "Rizqi",
+      "jenis_kelamin": "L",
+      "tempat_lahir": "Sidoarjo",
+      "tanggal_lahir": "2012-11-03",
+      "asal_sekolah": "MI Ma'arif Sidoarjo",
+      "jurusan": "Tahfidz Intensif",
+      "nama_ayah": "Bambang Santoso",
+      "pekerjaan_ayah": "Karyawan Swasta",
+      "nama_ibu": "Nurul Hidayah",
+      "pekerjaan_ibu": "Wiraswasta",
+      "no_hp_wali": "081555667788",
+      "alamat": "Perum Graha Indah Blok B-3, Sidoarjo, Jawa Timur",
+      "status": "menunggu",
+      "gelombang_id": 1,
+      "created_at": "2026-09-24T15:50:18.071Z"
+    }
+  ],
+  "galeri": [
+    {
+      "id": 1,
+      "judul": "Gedung Asrama & Masjid Utama",
+      "deskripsi": "Lingkungan pondok asri, nyaman, dan tenang untuk belajar",
+      "foto_url": "https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=800&q=80",
+      "urutan": 1,
+      "created_at": "2026-09-24T15:50:18.071Z"
+    }
+  ]
+}

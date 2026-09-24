@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-primary: #0f4c1e;
+    --color-primary-light: #1a6b2b;
+    --color-primary-dark: #083310;
+    --color-accent: #c8a84b;
+    --color-accent-light: #d4b96a;
+    --color-accent-dark: #a8883a;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
+    background-color: #fafafa;
+    color: #1a1a1a;
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #c8a84b, #f0d080, #c8a84b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-pattern-islamic {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8a84b' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  .card-glass {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(200, 168, 75, 0.2);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #0f4c1e, #1a6b2b);
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(15, 76, 30, 0.3);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(15, 76, 30, 0.4);
+  }
+
+  .btn-accent {
+    background: linear-gradient(135deg, #c8a84b, #d4b96a);
+    color: #1a1a1a;
+    padding: 0.75rem 2rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(200, 168, 75, 0.3);
+  }
+
+  .btn-accent:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(200, 168, 75, 0.5);
+  }
+
+  .section-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0f4c1e;
+    text-align: center;
+  }
+
+  .divider-gold {
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, #c8a84b, #f0d080);
+    border-radius: 2px;
+    margin: 1rem auto;
+  }
+}
