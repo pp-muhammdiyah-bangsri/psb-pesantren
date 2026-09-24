@@ -1,6 +1,7 @@
 ﻿import { createAdminClient } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
+import ProgramSection from "@/components/ProgramSection";
 import GelombangSection from "@/components/GelombangSection";
 import GaleriSection from "@/components/GaleriSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
@@ -29,6 +30,19 @@ async function getConfig() {
   }
 }
 
+async function getPrograms() {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("program_unggulan")
+      .select("*")
+      .order("urutan");
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 async function getGelombang() {
   try {
     const admin = createAdminClient();
@@ -54,12 +68,15 @@ async function getGaleri() {
 }
 
 export default async function HomePage() {
-  const [config, gelombang, galeri] = await Promise.all([getConfig(), getGelombang(), getGaleri()]);
+  const [config, programs, gelombang, galeri] = await Promise.all([
+    getConfig(), getPrograms(), getGelombang(), getGaleri()
+  ]);
 
   return (
     <main>
       <Navbar config={config} />
       <HeroSection config={config} gelombang={gelombang} />
+      <ProgramSection programs={programs} config={config} />
       <GelombangSection gelombang={gelombang} config={config} />
       <GaleriSection galeri={galeri} config={config} />
       <WhatsAppButton noWa={config.no_wa_admin} />

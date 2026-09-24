@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -72,7 +72,7 @@ function AdminDashboardContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "pendaftar";
 
-  const [activeTab, setActiveTab] = useState<"pendaftar" | "kustomisasi" | "gelombang" | "galeri">(initialTab as any);
+  const [activeTab, setActiveTab] = useState<"pendaftar" | "kustomisasi" | "gelombang" | "galeri" | "program">(initialTab as any);
 
   // Auth
   const token = typeof window !== "undefined" ? localStorage.getItem("psb_admin_token") : null;
@@ -115,6 +115,14 @@ function AdminDashboardContent() {
     foto_url: "",
     urutan: "1"
   });
+
+  // Program Unggulan State
+  interface ProgramItem { id: number; nama: string; deskripsi: string; icon: string; warna: string; urutan: number; is_aktif: boolean; }
+  const [programList, setProgramList] = useState<ProgramItem[]>([]);
+  const [loadingProgram, setLoadingProgram] = useState(false);
+  const [showProgramForm, setShowProgramForm] = useState(false);
+  const [programForm, setProgramForm] = useState({ nama: "", deskripsi: "", icon: "⭐", warna: "#0f4c1e", urutan: "1" });
+  const ICON_PRESETS = ["⭐","📖","🕌","🏫","🎓","💻","🌍","⚽","🎨","🔬","🤝","🌿","📿","🏆","💡","🎵"];
 
   // Auth Guard
   useEffect(() => {
@@ -451,6 +459,18 @@ function AdminDashboardContent() {
           >
             <ImageIcon size={17} />
             <span>Galeri Foto</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab("program"); if (programList.length === 0) { setLoadingProgram(true); fetch("/api/program").then(r=>r.json()).then(d=>{ if(d.ok) setProgramList(d.data||[]); setLoadingProgram(false); }); } }}
+            className={`flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 transition-all ${
+              activeTab === "program"
+                ? "border-green-700 text-green-800 bg-green-50/50"
+                : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+            }`}
+          >
+            <BookOpen size={17} />
+            <span>Program Unggulan</span>
           </button>
         </div>
       </div>
