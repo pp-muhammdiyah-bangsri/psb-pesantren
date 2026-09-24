@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { BookOpen, MapPin, Phone, Mail, Heart } from "lucide-react";
 import { toDirectImageUrl } from "@/lib/mediaUtils";
