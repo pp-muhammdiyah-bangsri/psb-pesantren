@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 import { useState, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { parseMediaUrl } from "@/lib/mediaUtils";
 
 interface GaleriItem {
   id: number;
@@ -14,159 +15,160 @@ interface GaleriSectionProps {
   config: Record<string, string>;
 }
 
-/**
- * Konversi Google Drive URL ke URL gambar langsung.
- * Tambahkan =w600 untuk resize otomatis (hemat bandwidth ~70%).
- */
-function toDirectImageUrl(url: string, width = 600): string {
-  if (!url) return url;
-  if (url.includes("lh3.googleusercontent.com")) {
-    // Sudah format langsung — tambah ukuran jika belum ada
-    return url.replace(/=w\d+$/, "") + `=w${width}`;
-  }
-  const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (fileMatch) return `https://lh3.googleusercontent.com/d/${fileMatch[1]}=w${width}`;
-  const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (idMatch) return `https://lh3.googleusercontent.com/d/${idMatch[1]}=w${width}`;
-  return url;
-}
-
-// Placeholder SVG blur — ditampilkan saat gambar belum selesai load
-const PLACEHOLDER = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='3'%3E%3Crect width='4' height='3' fill='%23d1d5db'/%3E%3C/svg%3E`;
-
-function LazyImage({ src, alt, className, style, onClick }: {
-  src: string; alt: string; className?: string; style?: React.CSSProperties; onClick?: () => void;
-}) {
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
-
-  return (
-    <div className={className} style={{ ...style, position: "relative", overflow: "hidden", background: "#e5e7eb" }} onClick={onClick}>
-      {/* Skeleton shimmer saat loading */}
-      {!loaded && !error && (
-        <div style={{
-          position: "absolute", inset: 0,
-          background: "linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%)",
-          backgroundSize: "200% 100%",
-          animation: "shimmer 1.4s ease-in-out infinite",
-        }} />
-      )}
-      <img
-        src={error ? PLACEHOLDER : src}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        onLoad={() => setLoaded(true)}
-        onError={() => { setError(true); setLoaded(true); }}
-        style={{
-          width: "100%", height: "100%", objectFit: "cover",
-          opacity: loaded ? 1 : 0,
-          transition: "opacity 0.4s ease",
-          display: "block",
-        }}
-      />
-    </div>
-  );
-}
-
 export default function GaleriSection({ galeri, config }: GaleriSectionProps) {
   const [lightbox, setLightbox] = useState<number | null>(null);
   const primary = config.warna_primer || "#0f4c1e";
   const accent = config.warna_aksen || "#c8a84b";
 
   const close = useCallback(() => setLightbox(null), []);
-  const prev = useCallback(() => setLightbox((i) => (i !== null ? (i - 1 + galeri.length) % galeri.length : null)), [galeri.length]);
-  const next = useCallback(() => setLightbox((i) => (i !== null ? (i + 1) % galeri.length : null)), [galeri.length]);
+  const prev = useCallback(
+    () => setLightbox((i) => (i !== null ? (i - 1 + galeri.length) % galeri.length : null)),
+    [galeri.length]
+  );
+  const next = useCallback(
+    () => setLightbox((i) => (i !== null ? (i + 1) % galeri.length : null)),
+    [galeri.length]
+  );
 
   if (galeri.length === 0) return null;
 
+  const currentMedia = lightbox !== null ? parseMediaUrl(galeri[lightbox].foto_url) : null;
+
   return (
-    <>
-      <style>{`
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-      `}</style>
+    <section id="galeri" className="py-20 px-4" style={{ background: "white" }}>
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <p className="text-sm font-semibold uppercase tracking-widest mb-2" style={{ color: accent }}>
+            Galeri
+          </p>
+          <h2 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{ color: primary }}>
+            Kehidupan di Pesantren
+          </h2>
+          <div className="w-16 h-1 mx-auto rounded-full" style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }} />
+        </div>
 
-      <section id="galeri" className="py-20 px-4" style={{ background: "white" }}>
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <p className="text-sm font-semibold uppercase tracking-widest mb-2" style={{ color: accent }}>
-              Galeri
-            </p>
-            <h2 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{ color: primary }}>
-              Kehidupan di Pesantren
-            </h2>
-            <div className="w-16 h-1 mx-auto rounded-full" style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }} />
-          </div>
-
-          {/* Grid — lazy load semua gambar */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-            {galeri.map((item, idx) => (
+        {/* Grid Foto & Video */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+          {galeri.map((item, idx) => {
+            const media = parseMediaUrl(item.foto_url);
+            return (
               <div
                 key={item.id}
-                className="relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer group"
+                onClick={() => setLightbox(idx)}
+                className="relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer group bg-gray-100"
                 style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.12)" }}
               >
-                <LazyImage
-                  src={toDirectImageUrl(item.foto_url, 600)}
+                <img
+                  src={media.thumbnailUrl}
                   alt={item.judul || "Galeri"}
-                  style={{ width: "100%", height: "100%", transition: "transform 0.5s ease" }}
-                  className="group-hover:scale-110"
-                  onClick={() => setLightbox(idx)}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://placehold.co/600x450/${primary.replace("#", "")}/${accent.replace("#", "")}?text=Galeri`;
+                  }}
                 />
-                {/* Overlay */}
+
+                {/* Video Play Badge jika YouTube */}
+                {media.type === "youtube" && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg transform transition-transform group-hover:scale-115">
+                      <Play size={24} className="fill-white translate-x-0.5" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Overlay Text */}
                 <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3 pointer-events-none"
-                  style={{ background: `linear-gradient(to top, ${primary}cc, transparent)` }}
+                  style={{ background: `linear-gradient(to top, ${primary}e6, transparent)` }}
                 >
                   {item.judul && (
-                    <p className="text-white font-semibold text-sm leading-tight">{item.judul}</p>
+                    <p className="text-white font-semibold text-sm leading-tight drop-shadow-sm">{item.judul}</p>
+                  )}
+                  {item.deskripsi && (
+                    <p className="text-white/80 text-xs mt-0.5 line-clamp-1">{item.deskripsi}</p>
                   )}
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Lightbox — gambar hi-res hanya dimuat saat diklik */}
-          {lightbox !== null && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
-              onClick={close}
-            >
-              <button onClick={close} className="absolute top-4 right-4 text-white/70 hover:text-white z-10">
-                <X size={32} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); prev(); }}
-                className="absolute left-4 text-white/70 hover:text-white p-2 z-10"
-              >
-                <ChevronLeft size={36} />
-              </button>
-              <div className="max-w-4xl max-h-[85vh] mx-16" onClick={(e) => e.stopPropagation()}>
-                {/* Lightbox load gambar full-size (1200px) */}
-                <img
-                  src={toDirectImageUrl(galeri[lightbox].foto_url, 1200)}
-                  alt={galeri[lightbox].judul || ""}
-                  className="max-w-full max-h-[80vh] object-contain rounded-lg"
-                  loading="eager"
-                />
-                {galeri[lightbox].judul && (
-                  <p className="text-white text-center mt-3 font-medium">{galeri[lightbox].judul}</p>
-                )}
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); next(); }}
-                className="absolute right-4 text-white/70 hover:text-white p-2 z-10"
-              >
-                <ChevronRight size={36} />
-              </button>
-            </div>
-          )}
+            );
+          })}
         </div>
-      </section>
-    </>
+
+        {/* Lightbox Modal */}
+        {lightbox !== null && currentMedia && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4"
+            onClick={close}
+          >
+            <button
+              onClick={close}
+              className="absolute top-4 right-4 text-white/80 hover:text-white z-20 p-2 rounded-full bg-black/40 hover:bg-black/70 transition-colors"
+              aria-label="Tutup"
+            >
+              <X size={28} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                prev();
+              }}
+              className="absolute left-2 sm:left-6 text-white/80 hover:text-white p-2.5 rounded-full bg-black/40 hover:bg-black/70 transition-colors z-20"
+              aria-label="Sebelumnya"
+            >
+              <ChevronLeft size={32} />
+            </button>
+
+            <div
+              className="max-w-4xl w-full max-h-[90vh] mx-10 sm:mx-16 flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {currentMedia.type === "youtube" ? (
+                <div className="w-full aspect-video rounded-xl overflow-hidden shadow-2xl bg-black">
+                  <iframe
+                    src={currentMedia.embedUrl}
+                    title={galeri[lightbox].judul || "Video Pesantren"}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <img
+                  src={currentMedia.originalUrl}
+                  alt={galeri[lightbox].judul || "Galeri"}
+                  referrerPolicy="no-referrer"
+                  className="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = `https://placehold.co/800x600/${primary.replace("#", "")}/${accent.replace("#", "")}?text=Gambar+Galeri`;
+                  }}
+                />
+              )}
+
+              {galeri[lightbox].judul && (
+                <div className="text-center mt-3 max-w-xl">
+                  <p className="text-white font-semibold text-base sm:text-lg">{galeri[lightbox].judul}</p>
+                  {galeri[lightbox].deskripsi && (
+                    <p className="text-white/70 text-xs sm:text-sm mt-1">{galeri[lightbox].deskripsi}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                next();
+              }}
+              className="absolute right-2 sm:right-6 text-white/80 hover:text-white p-2.5 rounded-full bg-black/40 hover:bg-black/70 transition-colors z-20"
+              aria-label="Berikutnya"
+            >
+              <ChevronRight size={32} />
+            </button>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

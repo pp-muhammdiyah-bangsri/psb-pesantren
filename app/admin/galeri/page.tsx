@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Upload, Trash2, Plus } from "lucide-react";
+import { parseMediaUrl } from "@/lib/mediaUtils";
 import Link from "next/link";
 
 interface GaleriItem { id: number; judul: string | null; foto_url: string; urutan: number; }
@@ -84,7 +85,7 @@ export default function AdminGaleri() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {items.map(item => (
               <div key={item.id} className="relative rounded-xl overflow-hidden group aspect-[4/3]">
-                <img src={item.foto_url} alt={item.judul || ""} className="w-full h-full object-cover" />
+                <img src={parseMediaUrl(item.foto_url).thumbnailUrl} alt={item.judul || ""} referrerPolicy="no-referrer" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = "https://placehold.co/400x300/e2e8f0/64748b?text=Galeri"; }} />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
                   <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 bg-red-600 text-white p-2 rounded-full transition-all hover:scale-110">
                     <Trash2 size={16} />

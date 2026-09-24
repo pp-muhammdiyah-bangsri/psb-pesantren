@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu, X, BookOpen } from "lucide-react";
+import { toDirectImageUrl } from "@/lib/mediaUtils";
 
 interface NavbarProps {
   config: Record<string, string>;
@@ -24,7 +25,7 @@ export default function Navbar({ config }: NavbarProps) {
           {/* Logo + Nama */}
           <Link href="/" className="flex items-center gap-3 group">
             {config.logo_url ? (
-              <img src={config.logo_url} alt="Logo" className="h-10 w-10 rounded-full object-cover" />
+              <img src={toDirectImageUrl(config.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="h-10 w-10 rounded-full object-cover bg-white/10" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
             ) : (
               <div
                 className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
@@ -45,6 +46,9 @@ export default function Navbar({ config }: NavbarProps) {
           <div className="hidden md:flex items-center gap-6">
             <Link href="/#gelombang" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
               Gelombang PSB
+            </Link>
+            <Link href="/#program" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+              Program Unggulan
             </Link>
             <Link href="/#galeri" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
               Galeri
@@ -73,6 +77,9 @@ export default function Navbar({ config }: NavbarProps) {
         <div className="md:hidden px-4 pb-4 space-y-2" style={{ background: primary }}>
           <Link href="/#gelombang" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
             Gelombang PSB
+          </Link>
+          <Link href="/#program" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
+            Program Unggulan
           </Link>
           <Link href="/#galeri" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
             Galeri

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase";
 import jwt from "jsonwebtoken";
 
@@ -16,6 +17,8 @@ export async function POST(req: NextRequest) {
     const admin = createAdminClient();
     const { data, error } = await admin.from("galeri").insert(body).select().single();
     if (error) throw error;
+    revalidatePath("/");
+    revalidatePath("/admin/dashboard");
     return NextResponse.json({ ok: true, data });
   } catch (e: unknown) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Error" });
@@ -29,6 +32,8 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get("id");
     const admin = createAdminClient();
     await admin.from("galeri").delete().eq("id", Number(id));
+    revalidatePath("/");
+    revalidatePath("/admin/dashboard");
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Error" });

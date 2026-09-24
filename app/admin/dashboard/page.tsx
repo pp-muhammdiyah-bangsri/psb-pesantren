@@ -1,5 +1,6 @@
 ﻿"use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
+import { toDirectImageUrl, parseMediaUrl } from "@/lib/mediaUtils";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Users, CheckCircle, XCircle, Clock, Download,
@@ -859,7 +860,21 @@ function AdminDashboardContent() {
                           className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
                           style={{ borderColor: "#e5e7eb" }}
                         />
-                        <span className="text-[11px] text-gray-400 block mt-1">Kosongkan jika menggunakan logo default</span>
+                        <span className="text-[11px] text-gray-400 block mt-1">Mendukung link Google Drive, Supabase, atau URL gambar</span>
+                        {config.logo_url && (
+                          <div className="mt-2 flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100">
+                            <img
+                              src={toDirectImageUrl(config.logo_url)}
+                              alt="Preview Logo"
+                              referrerPolicy="no-referrer"
+                              className="w-8 h-8 object-contain rounded border bg-white p-0.5"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://placehold.co/100x100?text=Error";
+                              }}
+                            />
+                            <span className="text-xs text-gray-500 font-medium">Preview Logo Berhasil Dimuat</span>
+                          </div>
+                        )}
                       </div>
 
                       <div>
@@ -982,7 +997,7 @@ function AdminDashboardContent() {
                     <div className="p-3 text-white flex items-center justify-between" style={{ background: primaryColor }}>
                       <div className="flex items-center gap-2">
                         {config.logo_url ? (
-                          <img src={config.logo_url} alt="Logo" className="w-6 h-6 object-contain rounded" />
+                          <img src={toDirectImageUrl(config.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-6 h-6 object-contain rounded bg-white/20" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
                         ) : (
                           <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold" style={{ background: accentColor, color: primaryColor }}>
                             P
@@ -1262,26 +1277,42 @@ function AdminDashboardContent() {
 
             {/* Grid Galeri */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {galeriList.map((g) => (
-                <div key={g.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border flex flex-col justify-between" style={{ borderColor: "#f0f0f0" }}>
-                  <div className="h-44 bg-gray-100 relative">
-                    <img src={g.foto_url} alt={g.judul} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-4 flex items-center justify-between gap-3">
-                    <div>
-                      <h4 className="font-bold text-sm text-gray-900 leading-tight">{g.judul}</h4>
-                      {g.deskripsi && <p className="text-xs text-gray-400 mt-1 line-clamp-1">{g.deskripsi}</p>}
+              {galeriList.map((g) => {
+                const media = parseMediaUrl(g.foto_url);
+                return (
+                  <div key={g.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border flex flex-col justify-between" style={{ borderColor: "#f0f0f0" }}>
+                    <div className="h-44 bg-gray-100 relative group overflow-hidden">
+                      <img
+                        src={media.thumbnailUrl}
+                        alt={g.judul || "Foto Galeri"}
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "https://placehold.co/400x300/e2e8f0/64748b?text=Galeri";
+                        }}
+                      />
+                      {media.type === "youtube" && (
+                        <div className="absolute top-2 left-2 bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow">
+                          <span>▶ YouTube</span>
+                        </div>
+                      )}
                     </div>
-                    <button
-                      onClick={() => deleteGaleri(g.id)}
-                      className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-                      title="Hapus Foto"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="p-4 flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-sm text-gray-900 leading-tight truncate">{g.judul || "(Tanpa Judul)"}</h4>
+                        {g.deskripsi && <p className="text-xs text-gray-400 mt-1 line-clamp-1">{g.deskripsi}</p>}
+                      </div>
+                      <button
+                        onClick={() => deleteGaleri(g.id)}
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                        title="Hapus Foto / Video"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BookOpen, MapPin, Phone, Mail, Heart } from "lucide-react";
+import { toDirectImageUrl } from "@/lib/mediaUtils";
 
 interface FooterProps {
   config: Record<string, string>;
@@ -18,7 +19,7 @@ export default function Footer({ config }: FooterProps) {
           <div>
             <div className="flex items-center gap-3 mb-4">
               {config.logo_url ? (
-                <img src={config.logo_url} alt="Logo" className="h-10 w-10 rounded-full object-cover" />
+                <img src={toDirectImageUrl(config.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="h-10 w-10 rounded-full object-cover bg-white/10" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
               ) : (
                 <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: `${accent}20`, border: `1px solid ${accent}50` }}>
                   <BookOpen size={20} style={{ color: accent }} />
@@ -51,6 +52,7 @@ export default function Footer({ config }: FooterProps) {
             <div className="space-y-2">
               <Link href="/daftar" className="block text-sm text-white/60 hover:text-white transition-colors">Form Pendaftaran</Link>
               <Link href="/#gelombang" className="block text-sm text-white/60 hover:text-white transition-colors">Gelombang PSB</Link>
+              <Link href="/#program" className="block text-sm text-white/60 hover:text-white transition-colors">Program Unggulan</Link>
               <Link href="/#galeri" className="block text-sm text-white/60 hover:text-white transition-colors">Galeri Pesantren</Link>
               <Link href="/admin/login" className="block text-sm text-white/30 hover:text-white/60 transition-colors">Admin Panel</Link>
             </div>
