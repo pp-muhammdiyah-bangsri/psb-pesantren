@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   User, MapPin, GraduationCap, Users, Upload,
-  CheckCircle, ArrowLeft, ArrowRight, Send, BookOpen
+  CheckCircle, ArrowLeft, ArrowRight, Send, BookOpen, AlertCircle
 } from "lucide-react";
 
 const PROVINSI = [
@@ -19,15 +19,17 @@ const PROVINSI = [
 ];
 
 const STEPS = [
-  { id: 1, label: "Biodata", icon: User },
+  { id: 1, label: "Jalur & Biodata", icon: User },
   { id: 2, label: "Pendidikan & Alamat", icon: MapPin },
-  { id: 3, label: "Orang Tua", icon: Users },
-  { id: 4, label: "Dokumen", icon: Upload },
+  { id: 3, label: "Orang Tua / Wali", icon: Users },
+  { id: 4, label: "Dokumen Persyaratan", icon: Upload },
 ];
 
 type FormData = Record<string, string | File | null>;
 
 const INITIAL: FormData = {
+  jalur_pendaftaran: "reguler",
+  jenjang_tujuan: "SMP",
   nama_lengkap: "", nama_panggilan: "", jenis_kelamin: "",
   tempat_lahir: "", tanggal_lahir: "", anak_ke: "", jumlah_saudara: "",
   asal_sekolah: "", jurusan: "", tahun_lulus: "",
@@ -35,7 +37,7 @@ const INITIAL: FormData = {
   kabupaten: "", provinsi: "", kode_pos: "",
   nama_ayah: "", pekerjaan_ayah: "", nama_ibu: "", pekerjaan_ibu: "",
   no_hp_wali: "", email_wali: "",
-  foto: null, kk: null, ijazah: null,
+  foto: null, kk: null, akta: null, sktm: null,
 };
 
 function InputField({ label, required, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; required?: boolean }) {
@@ -46,7 +48,7 @@ function InputField({ label, required, ...props }: React.InputHTMLAttributes<HTM
       </label>
       <input
         className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all"
-        style={{ borderColor: "#e0e0e0", focusRingColor: "#0f4c1e" } as React.CSSProperties}
+        style={{ borderColor: "#e0e0e0" }}
         {...props}
       />
     </div>
@@ -70,12 +72,31 @@ function SelectField({ label, required, children, ...props }: React.SelectHTMLAt
   );
 }
 
-function FileField({ label, name, onChange, required }: { label: string; name: string; onChange: (name: string, file: File | null) => void; required?: boolean }) {
+function FileField({
+  label,
+  name,
+  onChange,
+  required,
+}: {
+  label: string;
+  name: string;
+  onChange: (name: string, file: File | null) => void;
+  required?: boolean;
+}) {
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
+  const MAX_SIZE = 1 * 1024 * 1024; // 1MB
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
+    if (file && file.size > MAX_SIZE) {
+      alert(`Ukuran file "${file.name}" adalah ${(file.size / 1024 / 1024).toFixed(2)}MB, melebihi batas maksimal 1MB. Silakan pilih file yang lebih kecil atau kompres terlebih dahulu.`);
+      e.target.value = "";
+      onChange(name, null);
+      setFileName("");
+      setPreview(null);
+      return;
+    }
     onChange(name, file);
     setFileName(file?.name || "");
     if (file && file.type.startsWith("image/")) {
@@ -92,14 +113,19 @@ function FileField({ label, name, onChange, required }: { label: string; name: s
       <label className="text-sm font-medium text-gray-700">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <label className="border-2 border-dashed rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer hover:border-green-400 transition-colors" style={{ borderColor: "#e0e0e0" }}>
+      <label
+        className="border-2 border-dashed rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer hover:border-green-500 transition-colors bg-gray-50/50 hover:bg-green-50/20"
+        style={{ borderColor: "#e0e0e0" }}
+      >
         {preview ? (
-          <img src={preview} alt="preview" className="h-24 object-contain rounded-lg" />
+          <img src={preview} alt="preview" className="h-24 object-contain rounded-lg shadow-sm" />
         ) : (
           <Upload size={24} className="text-gray-400" />
         )}
-        <span className="text-sm text-gray-500">{fileName || "Klik untuk pilih file"}</span>
-        <span className="text-xs text-gray-400">JPG, PNG, PDF (maks. 5MB)</span>
+        <span className="text-sm font-medium text-gray-700 text-center truncate max-w-full px-2">
+          {fileName || "Klik untuk memilih file"}
+        </span>
+        <span className="text-xs text-gray-400 font-medium">Format: JPG, PNG, PDF (Maksimal 1MB)</span>
         <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleChange} />
       </label>
     </div>
@@ -128,8 +154,17 @@ function DaftarForm() {
   const setFile = (key: string, file: File | null) => setForm(prev => ({ ...prev, [key]: file }));
 
   const validate = () => {
-    if (step === 1 && !form.nama_lengkap) { setError("Nama lengkap wajib diisi."); return false; }
-    if (step === 3 && !form.no_hp_wali) { setError("No HP wali wajib diisi."); return false; }
+    if (step === 1) {
+      if (!form.nama_lengkap) { setError("Nama lengkap wajib diisi."); return false; }
+      if (!form.jenis_kelamin) { setError("Jenis kelamin wajib dipilih."); return false; }
+    }
+    if (step === 3 && !form.no_hp_wali) { setError("No HP / WhatsApp wali wajib diisi."); return false; }
+    if (step === 4) {
+      if (form.jalur_pendaftaran === "lksa" && !form.sktm) {
+        setError("Calon pendaftar jalur Beasiswa LKSA wajib mengunggah Surat Keterangan Tidak Mampu (SKTM).");
+        return false;
+      }
+    }
     setError(""); return true;
   };
 
@@ -158,17 +193,22 @@ function DaftarForm() {
       }
       if (gelombangId) payload.gelombang_id = Number(gelombangId);
 
-      // Upload files
+      // Upload berkas dokumen (maks. 1MB per file)
       if (form.foto instanceof File) payload.foto_url = await uploadFile(form.foto, "foto");
       if (form.kk instanceof File) payload.kk_url = await uploadFile(form.kk, "kk");
-      if (form.ijazah instanceof File) payload.ijazah_url = await uploadFile(form.ijazah, "ijazah");
+      if (form.akta instanceof File) payload.akta_url = await uploadFile(form.akta, "akta");
+      if (form.sktm instanceof File) payload.sktm_url = await uploadFile(form.sktm, "sktm");
 
-      const res = await fetch("/api/psb", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch("/api/psb", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
       setSuccess({ nomor: data.nomor_registrasi });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Terjadi kesalahan. Coba lagi.");
+      setError(e instanceof Error ? e.message : "Terjadi kesalahan. Silakan coba lagi.");
     } finally {
       setSubmitting(false);
     }
@@ -187,8 +227,8 @@ function DaftarForm() {
             <p className="text-xs text-gray-500 mb-1">Nomor Registrasi</p>
             <p className="text-2xl font-mono font-bold" style={{ color: primary }}>{success.nomor}</p>
           </div>
-          <p className="text-xs text-gray-400 mb-6">Tim admin akan menghubungi Anda melalui WhatsApp untuk informasi selanjutnya.</p>
-          <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-white text-sm" style={{ background: primary }}>
+          <p className="text-xs text-gray-400 mb-6">Panitia PSB akan menghubungi Anda melalui WhatsApp untuk informasi jadwal tes dan seleksi berikutnya.</p>
+          <Link href="/" className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-semibold text-white text-sm shadow-md" style={{ background: primary }}>
             <ArrowLeft size={16} /> Kembali ke Beranda
           </Link>
         </div>
@@ -204,7 +244,7 @@ function DaftarForm() {
           <ArrowLeft size={16} /> Beranda
         </Link>
         <span className="text-white/30">|</span>
-        <span className="text-white text-sm font-semibold">Form Pendaftaran Santri Baru</span>
+        <span className="text-white text-sm font-semibold">Formulir Pendaftaran Santri Baru</span>
       </nav>
 
       <div className="max-w-2xl mx-auto px-4 py-10">
@@ -227,12 +267,12 @@ function DaftarForm() {
                   >
                     {done ? <CheckCircle size={18} /> : <Icon size={16} />}
                   </div>
-                  <span className="text-xs font-medium hidden sm:block" style={{ color: active ? accent : "rgba(255,255,255,0.4)" }}>
+                  <span className="text-xs font-medium hidden sm:block text-center" style={{ color: active ? accent : "rgba(255,255,255,0.6)" }}>
                     {s.label}
                   </span>
                 </div>
                 {idx < STEPS.length - 1 && (
-                  <div className="flex-1 h-0.5 mx-2" style={{ background: done ? "#16a34a" : "rgba(255,255,255,0.15)" }} />
+                  <div className="flex-1 h-0.5 mx-2" style={{ background: done ? "#16a34a" : "rgba(255,255,255,0.2)" }} />
                 )}
               </div>
             );
@@ -249,22 +289,121 @@ function DaftarForm() {
             <p className="text-gray-400 text-sm mb-6">Langkah {step} dari {STEPS.length}</p>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">{error}</div>
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-5 flex items-center gap-2">
+                <AlertCircle size={18} className="shrink-0 text-red-600" />
+                <span>{error}</span>
+              </div>
             )}
 
-            {/* Step 1: Biodata */}
+            {/* Step 1: Jalur & Biodata */}
             {step === 1 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Bagian Pilihan Jalur dan Jenjang Sekolah Formal */}
+                <div className="sm:col-span-2 bg-gradient-to-br from-green-50/80 to-emerald-50/30 p-4 sm:p-5 rounded-2xl border border-green-200/80 space-y-4">
+                  {/* Pilihan Jalur */}
+                  <div>
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-green-950 block mb-2">
+                      Pilih Jalur Pendaftaran <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label
+                        className={`flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                          form.jalur_pendaftaran === "reguler"
+                            ? "border-green-600 bg-white shadow-sm ring-2 ring-green-600/20"
+                            : "border-gray-200 bg-white/70 hover:bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="jalur_pendaftaran"
+                          value="reguler"
+                          checked={form.jalur_pendaftaran === "reguler"}
+                          onChange={() => set("jalur_pendaftaran", "reguler")}
+                          className="mt-1 text-green-700 focus:ring-green-600"
+                        />
+                        <div>
+                          <div className="text-sm font-bold text-gray-900">Santri Reguler (MBS)</div>
+                          <p className="text-xs text-gray-500 mt-0.5">Muhammadiyah Boarding School reguler berasrama</p>
+                        </div>
+                      </label>
+
+                      <label
+                        className={`flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                          form.jalur_pendaftaran === "lksa"
+                            ? "border-amber-600 bg-white shadow-sm ring-2 ring-amber-600/20"
+                            : "border-gray-200 bg-white/70 hover:bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="jalur_pendaftaran"
+                          value="lksa"
+                          checked={form.jalur_pendaftaran === "lksa"}
+                          onChange={() => set("jalur_pendaftaran", "lksa")}
+                          className="mt-1 text-amber-600 focus:ring-amber-500"
+                        />
+                        <div>
+                          <div className="text-sm font-bold text-amber-950 flex items-center gap-1.5">
+                            <span>Santri LKSA (Gratis)</span>
+                            <span className="text-[10px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded">Beasiswa</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">Khusus yatim / piatu / dhuafa asuhan LKSA</p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {form.jalur_pendaftaran === "lksa" && (
+                      <div className="text-xs text-amber-900 mt-2.5 bg-amber-50 p-2.5 rounded-xl border border-amber-200 leading-relaxed">
+                        ℹ️ <strong>Syarat Khusus LKSA:</strong> Pendaftar jalur ini bebas biaya dan wajib melampirkan berkas <strong>Surat Keterangan Tidak Mampu (SKTM)</strong> atau Surat Keterangan Yatim/Kematian Orang Tua pada langkah ke-4 (Dokumen).
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Pilihan Jenjang Formal */}
+                  <div>
+                    <label className="text-xs font-extrabold uppercase tracking-wider text-green-950 block mb-2">
+                      Jenjang Sekolah Formal yang Dituju <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2.5">
+                      {[
+                        { val: "SMP", label: "SMP", desc: "SMP Muhammadiyah" },
+                        { val: "SMA", label: "SMA", desc: "SMA Muhammadiyah" },
+                        { val: "SMK", label: "SMK", desc: "SMK Muhammadiyah" },
+                      ].map((item) => (
+                        <label
+                          key={item.val}
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all text-center ${
+                            form.jenjang_tujuan === item.val
+                              ? "border-green-600 bg-white shadow-sm ring-2 ring-green-600/20"
+                              : "border-gray-200 bg-white/70 hover:bg-white"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="jenjang_tujuan"
+                            value={item.val}
+                            checked={form.jenjang_tujuan === item.val}
+                            onChange={() => set("jenjang_tujuan", item.val)}
+                            className="sr-only"
+                          />
+                          <span className="text-base font-extrabold text-gray-900">{item.label}</span>
+                          <span className="text-[11px] text-gray-500 mt-0.5 hidden sm:block">{item.desc}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="sm:col-span-2">
-                  <InputField label="Nama Lengkap" required value={String(form.nama_lengkap)} onChange={e => set("nama_lengkap", e.target.value)} placeholder="Nama sesuai akta kelahiran" />
+                  <InputField label="Nama Lengkap" required value={String(form.nama_lengkap)} onChange={e => set("nama_lengkap", e.target.value)} placeholder="Nama lengkap sesuai akta kelahiran" />
                 </div>
                 <InputField label="Nama Panggilan" value={String(form.nama_panggilan)} onChange={e => set("nama_panggilan", e.target.value)} placeholder="Nama panggilan" />
                 <SelectField label="Jenis Kelamin" required value={String(form.jenis_kelamin)} onChange={e => set("jenis_kelamin", e.target.value)}>
-                  <option value="">-- Pilih --</option>
+                  <option value="">-- Pilih Jenis Kelamin --</option>
                   <option value="L">Laki-laki</option>
                   <option value="P">Perempuan</option>
                 </SelectField>
-                <InputField label="Tempat Lahir" value={String(form.tempat_lahir)} onChange={e => set("tempat_lahir", e.target.value)} placeholder="Kota lahir" />
+                <InputField label="Tempat Lahir" value={String(form.tempat_lahir)} onChange={e => set("tempat_lahir", e.target.value)} placeholder="Kota tempat lahir" />
                 <InputField label="Tanggal Lahir" type="date" value={String(form.tanggal_lahir)} onChange={e => set("tanggal_lahir", e.target.value)} />
                 <InputField label="Anak ke-" type="number" value={String(form.anak_ke)} onChange={e => set("anak_ke", e.target.value)} placeholder="1" min="1" />
                 <InputField label="Jumlah Saudara" type="number" value={String(form.jumlah_saudara)} onChange={e => set("jumlah_saudara", e.target.value)} placeholder="0" min="0" />
@@ -275,15 +414,17 @@ function DaftarForm() {
             {step === 2 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <InputField label="Asal Sekolah" value={String(form.asal_sekolah)} onChange={e => set("asal_sekolah", e.target.value)} placeholder="Nama sekolah asal" />
+                  <InputField label="Asal Sekolah Sebelumnya" value={String(form.asal_sekolah)} onChange={e => set("asal_sekolah", e.target.value)} placeholder="Contoh: SD Negeri 1 Bangsri / MTs ..." />
                 </div>
-                <InputField label="Jurusan/Program" value={String(form.jurusan)} onChange={e => set("jurusan", e.target.value)} placeholder="Jurusan (jika ada)" />
-                <InputField label="Tahun Lulus" type="number" value={String(form.tahun_lulus)} onChange={e => set("tahun_lulus", e.target.value)} placeholder="2024" />
-                <div className="sm:col-span-2"><InputField label="Alamat Lengkap" value={String(form.alamat)} onChange={e => set("alamat", e.target.value)} placeholder="Jl. ..." /></div>
-                <InputField label="RT/RW" value={String(form.rt_rw)} onChange={e => set("rt_rw", e.target.value)} placeholder="001/002" />
-                <InputField label="Kelurahan/Desa" value={String(form.kelurahan)} onChange={e => set("kelurahan", e.target.value)} />
+                <InputField label="Peminatan / Jurusan (jika SMA/SMK)" value={String(form.jurusan)} onChange={e => set("jurusan", e.target.value)} placeholder="Contoh: IPA / IPS / TKJ / Umum" />
+                <InputField label="Tahun Lulus" type="number" value={String(form.tahun_lulus)} onChange={e => set("tahun_lulus", e.target.value)} placeholder="2025" />
+                <div className="sm:col-span-2">
+                  <InputField label="Alamat Lengkap" value={String(form.alamat)} onChange={e => set("alamat", e.target.value)} placeholder="Nama jalan, RT/RW, Dusun" />
+                </div>
+                <InputField label="RT / RW" value={String(form.rt_rw)} onChange={e => set("rt_rw", e.target.value)} placeholder="001/002" />
+                <InputField label="Kelurahan / Desa" value={String(form.kelurahan)} onChange={e => set("kelurahan", e.target.value)} />
                 <InputField label="Kecamatan" value={String(form.kecamatan)} onChange={e => set("kecamatan", e.target.value)} />
-                <InputField label="Kabupaten/Kota" value={String(form.kabupaten)} onChange={e => set("kabupaten", e.target.value)} />
+                <InputField label="Kabupaten / Kota" value={String(form.kabupaten)} onChange={e => set("kabupaten", e.target.value)} />
                 <SelectField label="Provinsi" value={String(form.provinsi)} onChange={e => set("provinsi", e.target.value)}>
                   <option value="">-- Pilih Provinsi --</option>
                   {PROVINSI.map(p => <option key={p} value={p}>{p}</option>)}
@@ -292,7 +433,7 @@ function DaftarForm() {
               </div>
             )}
 
-            {/* Step 3: Orang Tua */}
+            {/* Step 3: Orang Tua / Wali */}
             {step === 3 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputField label="Nama Ayah" value={String(form.nama_ayah)} onChange={e => set("nama_ayah", e.target.value)} />
@@ -300,10 +441,11 @@ function DaftarForm() {
                 <InputField label="Nama Ibu" value={String(form.nama_ibu)} onChange={e => set("nama_ibu", e.target.value)} />
                 <InputField label="Pekerjaan Ibu" value={String(form.pekerjaan_ibu)} onChange={e => set("pekerjaan_ibu", e.target.value)} />
                 <div className="sm:col-span-2">
-                  <InputField label="No HP Wali/Orang Tua" required type="tel" value={String(form.no_hp_wali)} onChange={e => set("no_hp_wali", e.target.value)} placeholder="08xxxxxxxxxx" />
+                  <InputField label="No. WhatsApp / HP Orang Tua/Wali" required type="tel" value={String(form.no_hp_wali)} onChange={e => set("no_hp_wali", e.target.value)} placeholder="08xxxxxxxxxx" />
+                  <p className="text-[11px] text-gray-500 mt-1">Nomor ini akan digunakan untuk mengirimkan informasi tes dan kelulusan.</p>
                 </div>
                 <div className="sm:col-span-2">
-                  <InputField label="Email Wali (opsional)" type="email" value={String(form.email_wali)} onChange={e => set("email_wali", e.target.value)} placeholder="email@contoh.com" />
+                  <InputField label="Email Orang Tua/Wali (opsional)" type="email" value={String(form.email_wali)} onChange={e => set("email_wali", e.target.value)} placeholder="contoh@gmail.com" />
                 </div>
               </div>
             )}
@@ -312,12 +454,32 @@ function DaftarForm() {
             {step === 4 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="sm:col-span-2">
-                  <FileField label="Pas Foto (3x4)" name="foto" onChange={setFile} required />
+                  <FileField label="Pas Foto Santri (3x4)" name="foto" onChange={setFile} required />
                 </div>
-                <FileField label="Kartu Keluarga" name="kk" onChange={setFile} />
-                <FileField label="Ijazah / SKL" name="ijazah" onChange={setFile} />
-                <div className="sm:col-span-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
-                  <strong>Catatan:</strong> Dokumen asli akan diminta saat verifikasi di pesantren. File upload hanya untuk kelengkapan administrasi awal.
+                <FileField label="Kartu Keluarga (KK)" name="kk" onChange={setFile} />
+                <FileField label="Akta Kelahiran" name="akta" onChange={setFile} />
+
+                {/* Upload Khusus Santri LKSA */}
+                {form.jalur_pendaftaran === "lksa" && (
+                  <div className="sm:col-span-2 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-2">
+                    <div className="flex items-center gap-1.5 text-amber-900 font-bold text-sm">
+                      <AlertCircle size={16} className="text-amber-700" />
+                      <span>Berkas Wajib untuk Jalur Santri LKSA (Gratis):</span>
+                    </div>
+                    <FileField
+                      label="Surat Keterangan Tidak Mampu (SKTM) / Keterangan Yatim"
+                      name="sktm"
+                      onChange={setFile}
+                      required
+                    />
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      Lampirkan scan / foto Surat Keterangan Tidak Mampu dari Kelurahan/Desa atau Surat Keterangan Kematian Orang Tua (maksimal 1MB).
+                    </p>
+                  </div>
+                )}
+
+                <div className="sm:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-800 leading-relaxed">
+                  <strong>💡 Catatan Berkas:</strong> File yang diunggah maksimal berukuran <strong>1MB per dokumen</strong> (format JPG, PNG, atau PDF). Dokumen fisik asli akan diperiksa panitia saat daftar ulang / verifikasi di pondok pesantren.
                 </div>
               </div>
             )}
@@ -333,12 +495,12 @@ function DaftarForm() {
               <div />
             )}
             {step < 4 ? (
-              <button onClick={nextStep} className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90 hover:scale-105" style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)`, color: "white" }}>
+              <button onClick={nextStep} className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90" style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)`, color: "white" }}>
                 Lanjut <ArrowRight size={16} />
               </button>
             ) : (
-              <button onClick={submit} disabled={submitting} className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 disabled:opacity-60" style={{ background: `linear-gradient(135deg, ${accent}, #f0d080)`, color: primary }}>
-                {submitting ? "Mengirim..." : <><Send size={16} /> Kirim Pendaftaran</>}
+              <button onClick={submit} disabled={submitting} className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-95 disabled:opacity-60 shadow-md" style={{ background: `linear-gradient(135deg, ${accent}, #f0d080)`, color: primary }}>
+                {submitting ? "Mengirim Pendaftaran..." : <><Send size={16} /> Kirim Pendaftaran</>}
               </button>
             )}
           </div>
@@ -347,7 +509,6 @@ function DaftarForm() {
     </div>
   );
 }
-
 
 export default function DaftarPage() {
   return (

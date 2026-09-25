@@ -25,7 +25,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const admin = createAdminClient();
 
-    const { nama_lengkap, no_hp_wali, gelombang_id, email_wali, tahun_lulus, jenis_kelamin } = body;
+    const {
+      nama_lengkap,
+      no_hp_wali,
+      gelombang_id,
+      email_wali,
+      tahun_lulus,
+      jenis_kelamin,
+      jenjang_tujuan = "SMP",
+      jalur_pendaftaran = "reguler",
+      akta_url,
+      sktm_url,
+    } = body;
 
     // [S-3] Validasi field wajib
     if (!nama_lengkap || typeof nama_lengkap !== "string" || nama_lengkap.trim().length < 2) {
@@ -46,21 +57,58 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Jenis kelamin tidak valid." }, { status: 400 });
     }
 
-    // Sanitasi nama (hapus karakter berbahaya)
-    const sanitizedBody = {
+    const validJenjang = ["SMP", "SMA", "SMK"].includes(jenjang_tujuan) ? jenjang_tujuan : "SMP";
+    const validJalur = ["reguler", "lksa"].includes(jalur_pendaftaran) ? jalur_pendaftaran : "reguler";
+
+    // Sanitasi payload
+    const sanitizedBody: Record<string, unknown> = {
       ...body,
       nama_lengkap: nama_lengkap.trim(),
       nama_panggilan: body.nama_panggilan ? String(body.nama_panggilan).trim() : undefined,
-      status: "menunggu", // Paksa status awal
+      jenjang_tujuan: validJenjang,
+      jalur_pendaftaran: validJalur,
+      akta_url: akta_url || null,
+      sktm_url: sktm_url || null,
+      ijazah_url: body.ijazah_url || akta_url || null, // Dukung kompatibilitas tabel lama
+      status: "menunggu",
     };
 
-    // Insert pendaftar
-    const { data, error } = await admin
+    // Upaya 1: Insert dengan semua kolom baru
+    let insertResult = await admin
       .from("pendaftar")
       .insert(sanitizedBody)
       .select()
       .single();
-    if (error) throw error;
+
+    // Fallback jika database Supabase belum ditambahkan kolom baru
+    if (insertResult.error && insertResult.error.message?.includes("column")) {
+      console.warn("Kolom baru belum dibuat di Supabase, fallback menyimpan ke catatan_admin:", insertResult.error.message);
+
+      const fallbackCatatan = [
+        `[Jenjang: ${validJenjang}]`,
+        `[Jalur: ${validJalur === "lksa" ? "Beasiswa LKSA (Gratis)" : "Reguler (MBS)"}]`,
+        akta_url ? `[Akta: ${akta_url}]` : null,
+        sktm_url ? `[SKTM: ${sktm_url}]` : null,
+        body.catatan_admin || null,
+      ].filter(Boolean).join(" ");
+
+      const fallbackBody = { ...sanitizedBody };
+      delete fallbackBody.jenjang_tujuan;
+      delete fallbackBody.jalur_pendaftaran;
+      delete fallbackBody.akta_url;
+      delete fallbackBody.sktm_url;
+      fallbackBody.catatan_admin = fallbackCatatan;
+
+      insertResult = await admin
+        .from("pendaftar")
+        .insert(fallbackBody)
+        .select()
+        .single();
+    }
+
+    if (insertResult.error) throw insertResult.error;
+
+    const data = insertResult.data;
 
     // Update nomor registrasi
     const nomorReg = generateNomorRegistrasi(data.id);

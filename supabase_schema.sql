@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- SCHEMA SUPABASE untuk Web PSB SIMPLE Pesantren
 -- Jalankan di: Supabase Dashboard > SQL Editor
 -- =============================================
@@ -69,6 +69,10 @@ CREATE TABLE IF NOT EXISTS pendaftar (
   foto_url TEXT,
   kk_url TEXT,
   ijazah_url TEXT,
+  akta_url TEXT,
+  sktm_url TEXT,
+  jenjang_tujuan TEXT DEFAULT 'SMP',
+  jalur_pendaftaran TEXT DEFAULT 'reguler',
   status TEXT DEFAULT 'menunggu',
   catatan_admin TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -123,3 +127,11 @@ CREATE POLICY "public_read_galeri_storage" ON storage.objects FOR SELECT
 -- Public insert dokumen
 CREATE POLICY "public_insert_documents" ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'psb-documents');
+
+-- =============================================
+-- MIGRATION: Jalankan di Supabase SQL Editor jika tabel pendaftar sudah ada
+-- =============================================
+ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS jenjang_tujuan TEXT DEFAULT 'SMP';
+ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS jalur_pendaftaran TEXT DEFAULT 'reguler';
+ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS akta_url TEXT;
+ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS sktm_url TEXT;

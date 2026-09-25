@@ -1,5 +1,5 @@
 "use client";
-import { Award, Calendar, Users, MapPin, Play } from "lucide-react";
+import { Award } from "lucide-react";
 import { parseMediaUrl } from "@/lib/mediaUtils";
 
 interface TentangSectionProps {
@@ -74,28 +74,6 @@ export default function TentangSection({ config }: TentangSectionProps) {
                 </div>
               </div>
             )}
-
-            {/* Quick Info Badges */}
-            <div className="flex flex-wrap gap-3 pt-2">
-              {config.tahun_berdiri && (
-                <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 bg-gray-50 px-3.5 py-2 rounded-xl border border-gray-200">
-                  <Calendar size={15} style={{ color: accent }} />
-                  <span>Berdiri Tahun {config.tahun_berdiri}</span>
-                </div>
-              )}
-              {config.jumlah_santri && (
-                <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 bg-gray-50 px-3.5 py-2 rounded-xl border border-gray-200">
-                  <Users size={15} style={{ color: accent }} />
-                  <span>{config.jumlah_santri} Santri Terbina</span>
-                </div>
-              )}
-              {config.alamat && (
-                <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 bg-gray-50 px-3.5 py-2 rounded-xl border border-gray-200">
-                  <MapPin size={15} style={{ color: accent }} />
-                  <span className="line-clamp-1">{config.alamat}</span>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Video Player Box */}
@@ -114,7 +92,7 @@ export default function TentangSection({ config }: TentangSectionProps) {
                 />
               </div>
               <p className="text-center text-xs text-gray-400 mt-2.5 font-medium">
-                ▶ Video Profil Resmi {nama}
+                Video Profil Resmi {nama}
               </p>
             </div>
           )}

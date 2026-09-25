@@ -7,7 +7,7 @@ import {
   Search, Filter, LogOut, Eye, X, ChevronDown,
   Palette, Calendar, Image as ImageIcon, ExternalLink,
   Save, Plus, Trash2, ToggleLeft, ToggleRight, Phone,
-  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Layers
+  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Layers, FileText
 } from "lucide-react";
 import Link from "next/link";
 
@@ -25,6 +25,12 @@ interface Pendaftar {
   alamat?: string;
   asal_sekolah: string;
   jurusan?: string;
+  jenjang_tujuan?: string;
+  jalur_pendaftaran?: string;
+  akta_url?: string;
+  sktm_url?: string;
+  kk_url?: string;
+  ijazah_url?: string;
   status: "menunggu" | "diterima" | "ditolak" | "imported";
   created_at: string;
   catatan_admin?: string;
@@ -82,6 +88,8 @@ function AdminDashboardContent() {
   // Data Pendaftar State
   const [pendaftarList, setPendaftarList] = useState<Pendaftar[]>([]);
   const [filterStatus, setFilterStatus] = useState("semua");
+  const [filterJenjang, setFilterJenjang] = useState("semua");
+  const [filterJalur, setFilterJalur] = useState("semua");
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingPendaftar, setLoadingPendaftar] = useState(true);
   const [selectedPendaftar, setSelectedPendaftar] = useState<Pendaftar | null>(null);
@@ -222,14 +230,16 @@ function AdminDashboardContent() {
   };
 
   const exportCSV = () => {
-    const headers = ["No Registrasi", "Nama", "JK", "HP Wali", "Asal Sekolah", "Program", "Status", "Tanggal Daftar"];
-    const rows = pendaftarList.map((d) => [
+    const headers = ["No Registrasi", "Nama Lengkap", "JK", "Jalur Pendaftaran", "Jenjang Tujuan", "No HP Wali", "Asal Sekolah", "Peminatan", "Status", "Tanggal Daftar"];
+    const rows = filteredPendaftar.map((d) => [
       d.nomor_registrasi || `PSB-${d.id}`,
       d.nama_lengkap,
-      d.jenis_kelamin === "L" ? "Laki-laki" : "Perempuan",
+      d.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki",
+      (d.jalur_pendaftaran || (d.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")) === "lksa" ? "LKSA (Gratis)" : "Reguler (MBS)",
+      d.jenjang_tujuan || (d.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP",
       d.no_hp_wali,
       d.asal_sekolah,
-      d.jurusan || "Reguler",
+      d.jurusan || "-",
       d.status,
       new Date(d.created_at).toLocaleDateString("id-ID")
     ]);
@@ -339,11 +349,26 @@ function AdminDashboardContent() {
   };
 
   // Filtered Pendaftar
-  const filteredPendaftar = pendaftarList.filter((d) =>
-    (d.nama_lengkap && d.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (d.nomor_registrasi && d.nomor_registrasi.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (d.asal_sekolah && d.asal_sekolah.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredPendaftar = pendaftarList.filter((d) => {
+    const matchSearch =
+      (d.nama_lengkap && d.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (d.nomor_registrasi && d.nomor_registrasi.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (d.asal_sekolah && d.asal_sekolah.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (d.no_hp_wali && d.no_hp_wali.includes(searchQuery));
+    if (!matchSearch) return false;
+
+    if (filterJenjang !== "semua") {
+      const jenjang = (d.jenjang_tujuan || (d.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP").toUpperCase();
+      if (jenjang !== filterJenjang.toUpperCase()) return false;
+    }
+
+    if (filterJalur !== "semua") {
+      const jalur = (d.jalur_pendaftaran || (d.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")).toLowerCase();
+      if (jalur !== filterJalur.toLowerCase()) return false;
+    }
+
+    return true;
+  });
 
   const stats = {
     total: pendaftarList.length,
@@ -519,6 +544,29 @@ function AdminDashboardContent() {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={filterJalur}
+                  onChange={(e) => setFilterJalur(e.target.value)}
+                  className="border rounded-xl px-3 py-1.5 text-xs font-semibold bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e5e7eb" }}
+                >
+                  <option value="semua">Semua Jalur</option>
+                  <option value="reguler">Reguler (MBS)</option>
+                  <option value="lksa">Santri LKSA (Gratis)</option>
+                </select>
+
+                <select
+                  value={filterJenjang}
+                  onChange={(e) => setFilterJenjang(e.target.value)}
+                  className="border rounded-xl px-3 py-1.5 text-xs font-semibold bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e5e7eb" }}
+                >
+                  <option value="semua">Semua Jenjang</option>
+                  <option value="SMP">SMP</option>
+                  <option value="SMA">SMA</option>
+                  <option value="SMK">SMK</option>
+                </select>
+
                 <div className="flex bg-gray-100 p-1 rounded-xl">
                   {["semua", "menunggu", "diterima", "ditolak"].map((s) => (
                     <button
@@ -566,8 +614,8 @@ function AdminDashboardContent() {
                       <tr className="bg-gray-50/80 border-b text-xs text-gray-500 font-bold uppercase tracking-wider" style={{ borderColor: "#f0f0f0" }}>
                         <th className="px-5 py-3.5">No. Registrasi</th>
                         <th className="px-5 py-3.5">Nama Calon Santri</th>
-                        <th className="px-5 py-3.5">JK</th>
-                        <th className="px-5 py-3.5">Pendidikan & Asal</th>
+                        <th className="px-5 py-3.5">Jalur & Jenjang</th>
+                        <th className="px-5 py-3.5">Pendidikan Asal</th>
                         <th className="px-5 py-3.5">Wali & WhatsApp</th>
                         <th className="px-5 py-3.5 text-center">Status</th>
                         <th className="px-5 py-3.5 text-center">Aksi</th>
@@ -590,17 +638,28 @@ function AdminDashboardContent() {
                             <td className="px-5 py-3.5">
                               <span className="font-bold text-gray-900 block">{p.nama_lengkap}</span>
                               <span className="text-xs text-gray-400">
-                                {p.tempat_lahir || ""} {p.tanggal_lahir ? `• ${p.tanggal_lahir}` : ""}
+                                {p.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki"} {p.tempat_lahir ? `• ${p.tempat_lahir}` : ""} {p.tanggal_lahir ? `• ${p.tanggal_lahir}` : ""}
                               </span>
                             </td>
                             <td className="px-5 py-3.5">
-                              <span className={`font-bold ${p.jenis_kelamin === "P" ? "text-pink-600" : "text-blue-600"}`}>
-                                {p.jenis_kelamin || "L"}
-                              </span>
+                              <div className="flex flex-col gap-1 items-start">
+                                {(p.jalur_pendaftaran || (p.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")) === "lksa" ? (
+                                  <span className="inline-block px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                                    ★ LKSA (Gratis)
+                                  </span>
+                                ) : (
+                                  <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    Reguler (MBS)
+                                  </span>
+                                )}
+                                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                  Tujuan: {p.jenjang_tujuan || (p.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP"}
+                                </span>
+                              </div>
                             </td>
                             <td className="px-5 py-3.5">
-                              <span className="block text-gray-800">{p.asal_sekolah || "-"}</span>
-                              <span className="text-xs text-gray-400">{p.jurusan || "Reguler"}</span>
+                              <span className="block text-gray-800 font-medium">{p.asal_sekolah || "-"}</span>
+                              <span className="text-xs text-gray-400">{p.jurusan || "Umum"}</span>
                             </td>
                             <td className="px-5 py-3.5">
                               <span className="block font-medium text-gray-800">{p.nama_ayah || p.nama_ibu || "-"}</span>
@@ -1673,17 +1732,96 @@ function AdminDashboardContent() {
 
             <div className="space-y-4 text-xs">
               <div className="bg-gray-50 p-4 rounded-xl space-y-1.5">
-                <div className="font-mono text-[11px] font-bold text-green-800">
-                  {selectedPendaftar.nomor_registrasi || `PSB-${selectedPendaftar.id}`}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="font-mono text-xs font-bold text-green-800">
+                    {selectedPendaftar.nomor_registrasi || `PSB-${selectedPendaftar.id}`}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {((selectedPendaftar.jalur_pendaftaran || (selectedPendaftar.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")) === "lksa") ? (
+                      <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                        ★ Jalur LKSA (Gratis)
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        Jalur Reguler (MBS)
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                      Tujuan: {selectedPendaftar.jenjang_tujuan || (selectedPendaftar.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP"}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-sm font-black text-gray-900">{selectedPendaftar.nama_lengkap}</div>
+
+                <div className="text-sm font-black text-gray-900 pt-1">{selectedPendaftar.nama_lengkap}</div>
                 <div><strong>Jenis Kelamin:</strong> {selectedPendaftar.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki"}</div>
                 <div><strong>TTL:</strong> {selectedPendaftar.tempat_lahir || "-"}, {selectedPendaftar.tanggal_lahir || "-"}</div>
                 <div><strong>Asal Sekolah:</strong> {selectedPendaftar.asal_sekolah || "-"}</div>
-                <div><strong>Pilihan Program:</strong> {selectedPendaftar.jurusan || "Reguler"}</div>
+                <div><strong>Peminatan/Jurusan:</strong> {selectedPendaftar.jurusan || "Umum"}</div>
                 <div><strong>Orang Tua / Wali:</strong> {selectedPendaftar.nama_ayah || selectedPendaftar.nama_ibu || "-"}</div>
                 <div><strong>WhatsApp:</strong> {selectedPendaftar.no_hp_wali || "-"}</div>
                 <div><strong>Alamat:</strong> {selectedPendaftar.alamat || "-"}</div>
+              </div>
+
+              {/* Berkas Dokumen yang Diunggah */}
+              <div className="border rounded-xl p-3.5 bg-white space-y-2" style={{ borderColor: "#e5e7eb" }}>
+                <h4 className="font-bold text-gray-800 text-xs">Berkas Dokumen yang Diunggah:</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 rounded-lg bg-gray-50 border text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <FileText size={14} className="text-gray-500 shrink-0" />
+                      <span className="truncate">Pas Foto (3x4)</span>
+                    </div>
+                    {selectedPendaftar.foto_url ? (
+                      <a href={selectedPendaftar.foto_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold shrink-0 ml-1">
+                        Lihat ↗
+                      </a>
+                    ) : <span className="text-gray-400 shrink-0 ml-1">Kosong</span>}
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-gray-50 border text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <FileText size={14} className="text-gray-500 shrink-0" />
+                      <span className="truncate">Kartu Keluarga</span>
+                    </div>
+                    {selectedPendaftar.kk_url ? (
+                      <a href={selectedPendaftar.kk_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold shrink-0 ml-1">
+                        Lihat ↗
+                      </a>
+                    ) : <span className="text-gray-400 shrink-0 ml-1">Kosong</span>}
+                  </div>
+
+                  <div className="p-2 rounded-lg bg-gray-50 border text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <FileText size={14} className="text-gray-500 shrink-0" />
+                      <span className="truncate">Akta Kelahiran</span>
+                    </div>
+                    {(selectedPendaftar.akta_url || selectedPendaftar.ijazah_url) ? (
+                      <a href={selectedPendaftar.akta_url || selectedPendaftar.ijazah_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold shrink-0 ml-1">
+                        Lihat ↗
+                      </a>
+                    ) : <span className="text-gray-400 shrink-0 ml-1">Kosong</span>}
+                  </div>
+
+                  <div className={`p-2 rounded-lg border text-xs flex items-center justify-between ${
+                    (selectedPendaftar.jalur_pendaftaran === "lksa" || selectedPendaftar.catatan_admin?.includes("LKSA"))
+                      ? "bg-amber-50/70 border-amber-300"
+                      : "bg-gray-50"
+                  }`}>
+                    <div className="flex items-center gap-1.5 truncate">
+                      <FileText size={14} className={(selectedPendaftar.jalur_pendaftaran === "lksa" || selectedPendaftar.catatan_admin?.includes("LKSA")) ? "text-amber-700 shrink-0" : "text-gray-500 shrink-0"} />
+                      <span className="truncate font-semibold">SKTM (LKSA)</span>
+                    </div>
+                    {selectedPendaftar.sktm_url ? (
+                      <a href={selectedPendaftar.sktm_url} target="_blank" rel="noopener noreferrer" className="text-amber-900 font-extrabold hover:underline shrink-0 ml-1 bg-amber-100 px-1.5 py-0.5 rounded">
+                        Lihat SKTM ↗
+                      </a>
+                    ) : (
+                      <span className="text-gray-400 shrink-0 ml-1">
+                        {(selectedPendaftar.jalur_pendaftaran === "lksa" || selectedPendaftar.catatan_admin?.includes("LKSA")) ? "Belum upload" : "-"}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div>
