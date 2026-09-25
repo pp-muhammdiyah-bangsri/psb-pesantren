@@ -887,7 +887,21 @@ function AdminDashboardContent() {
                           className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
                           style={{ borderColor: "#e5e7eb" }}
                         />
-                        <span className="text-[11px] text-gray-400 block mt-1">Foto pemandangan pesantren untuk background hero</span>
+                        <span className="text-[11px] text-gray-400 block mt-1">Foto pemandangan pesantren untuk background hero (bisa Google Drive)</span>
+                        {config.hero_bg_url && (
+                          <div className="mt-2 flex items-center gap-2.5 p-2 bg-gray-50 rounded-xl border border-gray-100">
+                            <img
+                              src={toDirectImageUrl(config.hero_bg_url)}
+                              alt="Preview Hero Banner"
+                              referrerPolicy="no-referrer"
+                              className="w-16 h-9 object-cover rounded-lg border bg-white"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://placehold.co/160x90?text=Error";
+                              }}
+                            />
+                            <span className="text-xs text-gray-500 font-medium">Preview Banner Hero</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -962,6 +976,20 @@ function AdminDashboardContent() {
                         className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
                         style={{ borderColor: "#e5e7eb" }}
                       />
+                      <span className="text-[11px] text-gray-400 block mt-1">Mendukung link YouTube biasa, youtu.be, atau kode embed iframe</span>
+                      {config.video_profil_url && (
+                        <div className="mt-2 flex items-center gap-2.5 p-2 bg-gray-50 rounded-xl border border-gray-100">
+                          {parseMediaUrl(config.video_profil_url).thumbnailUrl ? (
+                            <img
+                              src={parseMediaUrl(config.video_profil_url).thumbnailUrl}
+                              alt="Preview Video"
+                              referrerPolicy="no-referrer"
+                              className="w-16 h-9 object-cover rounded-lg border bg-white"
+                            />
+                          ) : null}
+                          <span className="text-xs text-gray-500 font-medium">Video YouTube Berhasil Dikenali</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

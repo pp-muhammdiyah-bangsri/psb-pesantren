@@ -1,6 +1,7 @@
 ﻿import { createAdminClient } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
+import TentangSection from "@/components/TentangSection";
 import ProgramSection from "@/components/ProgramSection";
 import GelombangSection from "@/components/GelombangSection";
 import GaleriSection from "@/components/GaleriSection";
@@ -76,6 +77,7 @@ export default async function HomePage() {
     <main>
       <Navbar config={config} />
       <HeroSection config={config} gelombang={gelombang} />
+      <TentangSection config={config} />
       <ProgramSection programs={programs} config={config} />
       <GelombangSection gelombang={gelombang} config={config} />
       <GaleriSection galeri={galeri} config={config} />

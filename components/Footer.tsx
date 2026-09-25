@@ -13,7 +13,7 @@ export default function Footer({ config }: FooterProps) {
   const nama = config.nama_pesantren || "Pesantren";
 
   return (
-    <footer id="tentang" style={{ background: primary, borderTop: `1px solid ${accent}30` }}>
+    <footer id="footer" style={{ background: primary, borderTop: `1px solid ${accent}30` }}>
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="grid md:grid-cols-3 gap-8 mb-8">
           {/* Brand */}
