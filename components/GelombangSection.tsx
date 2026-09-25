@@ -36,12 +36,17 @@ export default function GelombangSection({ gelombang, config }: GelombangSection
         {/* Header */}
         <div className="text-center mb-12">
           <p className="text-sm font-semibold uppercase tracking-widest mb-2" style={{ color: accent }}>
-            Jadwal Pendaftaran
+            {config.gelombang_badge || "Jadwal Pendaftaran"}
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{ color: primary }}>
-            Gelombang Penerimaan Santri Baru
+            {config.gelombang_judul || "Gelombang Penerimaan Santri Baru"}
           </h2>
-          <div className="w-16 h-1 mx-auto rounded-full" style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }} />
+          {config.gelombang_deskripsi && (
+            <p className="text-gray-500 max-w-xl mx-auto text-base mt-2">
+              {config.gelombang_deskripsi}
+            </p>
+          )}
+          <div className="w-16 h-1 mx-auto rounded-full mt-3" style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }} />
         </div>
 
         {gelombang.length === 0 ? (

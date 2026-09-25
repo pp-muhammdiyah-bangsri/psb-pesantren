@@ -37,7 +37,7 @@ export default function Navbar({ config }: NavbarProps) {
             <div className="hidden sm:block">
               <p className="text-white font-bold text-sm leading-tight">{namaSingkat}</p>
               <p className="text-xs leading-tight" style={{ color: accent }}>
-                Pendaftaran Online
+                {config.navbar_sub || "Pendaftaran Online"}
               </p>
             </div>
           </Link>

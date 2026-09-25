@@ -26,13 +26,13 @@ export default function ProgramSection({ programs, config }: ProgramSectionProps
         {/* Header */}
         <div className="text-center mb-14">
           <p className="text-sm font-semibold uppercase tracking-widest mb-2" style={{ color: accent }}>
-            Keunggulan Kami
+            {config.program_badge || "Keunggulan Kami"}
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{ color: primary }}>
-            Program Unggulan
+            {config.program_judul || "Program Unggulan"}
           </h2>
           <p className="text-gray-500 max-w-xl mx-auto text-base">
-            Kami menyediakan program terbaik untuk membentuk generasi yang berilmu, berakhlak, dan berdaya saing global.
+            {config.program_deskripsi || "Kami menyediakan program terbaik untuk membentuk generasi yang berilmu, berakhlak, dan berdaya saing global."}
           </p>
           <div
             className="w-16 h-1 mx-auto rounded-full mt-4"

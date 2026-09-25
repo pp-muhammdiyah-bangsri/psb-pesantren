@@ -116,7 +116,7 @@ export default function HeroSection({ config, gelombang }: HeroProps) {
             style={{ background: `${accent}15`, border: `1px solid ${accent}40`, color: accent }}
           >
             <BookOpen size={14} />
-            Penerimaan Santri Baru
+            {config.hero_badge || "Penerimaan Santri Baru"}
           </div>
         )}
 
@@ -161,7 +161,7 @@ export default function HeroSection({ config, gelombang }: HeroProps) {
               boxShadow: `0 6px 30px ${accent}50`,
             }}
           >
-            Daftar Sekarang <ArrowRight size={18} />
+            {config.hero_cta_daftar || "Daftar Sekarang"} <ArrowRight size={18} />
           </Link>
 
           {videoMedia && videoMedia.embedUrl ? (
@@ -179,7 +179,7 @@ export default function HeroSection({ config, gelombang }: HeroProps) {
               >
                 <Play size={12} className="fill-white translate-x-0.5" />
               </div>
-              <span>Tonton Video Profil</span>
+              <span>{config.hero_cta_video || "Tonton Video Profil"}</span>
             </button>
           ) : (
             <a
@@ -187,7 +187,7 @@ export default function HeroSection({ config, gelombang }: HeroProps) {
               className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-semibold text-base border-2 text-white transition-all hover:bg-white/10"
               style={{ borderColor: `${accent}60` }}
             >
-              Info Pendaftaran
+              {config.hero_cta_info || "Info Pendaftaran"}
             </a>
           )}
         </div>

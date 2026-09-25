@@ -40,12 +40,17 @@ export default function GaleriSection({ galeri, config }: GaleriSectionProps) {
         {/* Header */}
         <div className="text-center mb-12">
           <p className="text-sm font-semibold uppercase tracking-widest mb-2" style={{ color: accent }}>
-            Galeri
+            {config.galeri_badge || "Galeri"}
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{ color: primary }}>
-            Kehidupan di Pesantren
+            {config.galeri_judul || "Kehidupan di Pesantren"}
           </h2>
-          <div className="w-16 h-1 mx-auto rounded-full" style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }} />
+          {config.galeri_deskripsi && (
+            <p className="text-gray-500 max-w-xl mx-auto text-base mt-2">
+              {config.galeri_deskripsi}
+            </p>
+          )}
+          <div className="w-16 h-1 mx-auto rounded-full mt-3" style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }} />
         </div>
 
         {/* Grid Foto & Video */}

@@ -28,10 +28,10 @@ export default function TentangSection({ config }: TentangSectionProps) {
         {/* Section Header */}
         <div className="text-center mb-14">
           <p className="text-sm font-semibold uppercase tracking-widest mb-2" style={{ color: accent }}>
-            Profil & Visi
+            {config.tentang_badge || "Profil & Visi"}
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{ color: primary }}>
-            Tentang {nama}
+            {config.tentang_judul || `Tentang ${nama}`}
           </h2>
           <div
             className="w-16 h-1 mx-auto rounded-full"
@@ -54,7 +54,7 @@ export default function TentangSection({ config }: TentangSectionProps) {
               <div className="p-6 rounded-2xl border" style={{ borderColor: "#e5e7eb", background: "#fcfdfc" }}>
                 <div className="flex items-center gap-2 mb-3 font-bold text-sm" style={{ color: primary }}>
                   <Award size={18} style={{ color: accent }} />
-                  <span>Program Pendidikan yang Diselenggarakan:</span>
+                  <span>{config.tentang_program_label || "Program Pendidikan yang Diselenggarakan:"}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {programPendidikan.map((prog, idx) => (

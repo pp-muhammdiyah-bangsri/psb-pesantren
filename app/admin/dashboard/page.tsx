@@ -994,6 +994,192 @@ function AdminDashboardContent() {
                   </div>
                 </div>
 
+                {/* 4. Kustomisasi Teks & Judul Tiap Bagian */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm border" style={{ borderColor: "#f0f0f0" }}>
+                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b" style={{ borderColor: "#f0f0f0" }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: primaryColor }}>
+                      <Palette size={16} />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-gray-900">4. Teks, Judul & Kalimat Penjelas Bagian Web</h2>
+                      <p className="text-xs text-gray-500">Sesuaikan judul, badge, dan kalimat penjelas di setiap bagian website</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-5">
+                    {/* A. Bagian Program Unggulan */}
+                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Program Unggulan</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Atas</label>
+                          <input
+                            type="text"
+                            value={config.program_badge || ""}
+                            onChange={(e) => handleConfigChange("program_badge", e.target.value)}
+                            placeholder="Default: Keunggulan Kami"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Utama</label>
+                          <input
+                            type="text"
+                            value={config.program_judul || ""}
+                            onChange={(e) => handleConfigChange("program_judul", e.target.value)}
+                            placeholder="Default: Program Unggulan"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Penjelasan / Deskripsi di Bawah Judul</label>
+                          <textarea
+                            rows={2}
+                            value={config.program_deskripsi || ""}
+                            onChange={(e) => handleConfigChange("program_deskripsi", e.target.value)}
+                            placeholder="Default: Kami menyediakan program terbaik untuk membentuk generasi yang berilmu, berakhlak, dan berdaya saing global."
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                          <span className="text-[10px] text-gray-400 block mt-0.5">Penjelasan visi keunggulan yang tampil tepat di bawah tulisan Program Unggulan</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* B. Bagian Profil / Tentang Pesantren */}
+                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Profil & Tentang Pesantren</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Atas</label>
+                          <input
+                            type="text"
+                            value={config.tentang_badge || ""}
+                            onChange={(e) => handleConfigChange("tentang_badge", e.target.value)}
+                            placeholder="Default: Profil & Visi"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Bagian</label>
+                          <input
+                            type="text"
+                            value={config.tentang_judul || ""}
+                            onChange={(e) => handleConfigChange("tentang_judul", e.target.value)}
+                            placeholder="Default: Tentang {Nama Pesantren}"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Label Daftar Program</label>
+                          <input
+                            type="text"
+                            value={config.tentang_program_label || ""}
+                            onChange={(e) => handleConfigChange("tentang_program_label", e.target.value)}
+                            placeholder="Default: Program Pendidikan yang Diselenggarakan:"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* C. Bagian Galeri */}
+                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Galeri Santri</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Atas</label>
+                          <input
+                            type="text"
+                            value={config.galeri_badge || ""}
+                            onChange={(e) => handleConfigChange("galeri_badge", e.target.value)}
+                            placeholder="Default: Galeri"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Utama</label>
+                          <input
+                            type="text"
+                            value={config.galeri_judul || ""}
+                            onChange={(e) => handleConfigChange("galeri_judul", e.target.value)}
+                            placeholder="Default: Kehidupan di Pesantren"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Keterangan / Sub-judul (Opsional)</label>
+                          <input
+                            type="text"
+                            value={config.galeri_deskripsi || ""}
+                            onChange={(e) => handleConfigChange("galeri_deskripsi", e.target.value)}
+                            placeholder="Contoh: Dokumentasi sarana, fasilitas, dan kegiatan santri sehari-hari"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* D. Bagian Gelombang PSB & Tombol */}
+                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Gelombang PSB & Tombol Aksi</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Gelombang</label>
+                          <input
+                            type="text"
+                            value={config.gelombang_badge || ""}
+                            onChange={(e) => handleConfigChange("gelombang_badge", e.target.value)}
+                            placeholder="Default: Jadwal Pendaftaran"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Gelombang</label>
+                          <input
+                            type="text"
+                            value={config.gelombang_judul || ""}
+                            onChange={(e) => handleConfigChange("gelombang_judul", e.target.value)}
+                            placeholder="Default: Gelombang Penerimaan Santri Baru"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Teks Tombol Daftar (Hero)</label>
+                          <input
+                            type="text"
+                            value={config.hero_cta_daftar || ""}
+                            onChange={(e) => handleConfigChange("hero_cta_daftar", e.target.value)}
+                            placeholder="Default: Daftar Sekarang"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Teks Tombol Video (Hero)</label>
+                          <input
+                            type="text"
+                            value={config.hero_cta_video || ""}
+                            onChange={(e) => handleConfigChange("hero_cta_video", e.target.value)}
+                            placeholder="Default: Tonton Video Profil"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Save Button Bar */}
                 <div className="sticky bottom-4 z-20 bg-white/95 backdrop-blur p-4 rounded-2xl shadow-lg border flex items-center justify-between gap-4" style={{ borderColor: "#e5e7eb" }}>
                   <div className="text-xs text-gray-500 hidden sm:block">
