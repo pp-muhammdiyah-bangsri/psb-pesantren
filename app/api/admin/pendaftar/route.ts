@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 import jwt from "jsonwebtoken";
 
-const SECRET = process.env.ADMIN_JWT_SECRET || "psb-simple-pesantren-secret-2024";
+if (!process.env.ADMIN_JWT_SECRET) throw new Error("ADMIN_JWT_SECRET is not set in environment variables.");
+const SECRET = process.env.ADMIN_JWT_SECRET;
 
 function verifyToken(req: Request) {
   const auth = req.headers.get("Authorization");

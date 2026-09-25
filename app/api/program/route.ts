@@ -1,7 +1,16 @@
-﻿import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase";
+import jwt from "jsonwebtoken";
 
+function verifyToken(req: NextRequest) {
+  if (!process.env.ADMIN_JWT_SECRET) throw new Error("ADMIN_JWT_SECRET is not set.");
+  const auth = req.headers.get("Authorization");
+  if (!auth) throw new Error("Unauthorized: missing token.");
+  jwt.verify(auth.replace("Bearer ", ""), process.env.ADMIN_JWT_SECRET);
+}
+
+// GET tetap publik � digunakan landing page
 export async function GET() {
   try {
     const admin = createAdminClient();
@@ -17,8 +26,9 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    verifyToken(req);
     const body = await req.json();
     const admin = createAdminClient();
     const { data, error } = await admin
@@ -26,7 +36,7 @@ export async function POST(req: Request) {
       .insert({
         nama: body.nama,
         deskripsi: body.deskripsi || "",
-        icon: body.icon || "⭐",
+        icon: body.icon || "?",
         warna: body.warna || "#0f4c1e",
         urutan: body.urutan || 99,
         is_aktif: body.is_aktif !== false,
@@ -38,12 +48,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, data });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error";
-    return NextResponse.json({ ok: false, error: msg });
+    const status = msg.includes("Unauthorized") ? 401 : 500;
+    return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   try {
+    verifyToken(req);
     const body = await req.json();
     const admin = createAdminClient();
     const { id, ...fields } = body;
@@ -58,12 +70,14 @@ export async function PUT(req: Request) {
     return NextResponse.json({ ok: true, data });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error";
-    return NextResponse.json({ ok: false, error: msg });
+    const status = msg.includes("Unauthorized") ? 401 : 500;
+    return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
   try {
+    verifyToken(req);
     const { id } = await req.json();
     const admin = createAdminClient();
     const { error } = await admin.from("program_unggulan").delete().eq("id", id);
@@ -72,6 +86,7 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error";
-    return NextResponse.json({ ok: false, error: msg });
+    const status = msg.includes("Unauthorized") ? 401 : 500;
+    return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }

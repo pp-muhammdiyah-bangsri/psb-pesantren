@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { toDirectImageUrl, parseMediaUrl } from "@/lib/mediaUtils";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -263,8 +263,8 @@ function AdminDashboardContent() {
       } else {
         setConfigMsg("Gagal menyimpan: " + (d.error || "Terjadi kesalahan"));
       }
-    } catch (err: any) {
-      setConfigMsg("Error: " + err.message);
+    } catch (err: unknown) {
+      setConfigMsg("Error: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setSavingConfig(false);
     }
@@ -1598,7 +1598,7 @@ function AdminDashboardContent() {
                   <button onClick={() => setShowProgramForm(false)} className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200">Batal</button>
                   <button onClick={async () => {
                     if (!programForm.nama.trim()) return alert("Nama program wajib diisi!");
-                    const r = await fetch("/api/program", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({...programForm, urutan: parseInt(programForm.urutan)||99}) });
+                    const r = await fetch("/api/program", { method: "POST", headers: {"Content-Type":"application/json", "Authorization": `Bearer ${token}`}, body: JSON.stringify({...programForm, urutan: parseInt(programForm.urutan)||99}) });
                     const d = await r.json();
                     if (d.ok) { setProgramList(prev => [...prev, d.data].sort((a,b)=>a.urutan-b.urutan)); setProgramForm({nama:"",deskripsi:"",icon:"⭐",warna:"#0f4c1e",urutan:"1"}); setShowProgramForm(false); }
                     else alert("Gagal: " + d.error);
@@ -1635,7 +1635,7 @@ function AdminDashboardContent() {
                     {prog.deskripsi && <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{prog.deskripsi}</p>}
                     <div className="flex gap-2 pt-2 border-t">
                       <button onClick={async () => {
-                        const r = await fetch("/api/program", { method: "PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: prog.id, is_aktif: !prog.is_aktif}) });
+                        const r = await fetch("/api/program", { method: "PUT", headers:{"Content-Type":"application/json", "Authorization": `Bearer ${token}`}, body: JSON.stringify({id: prog.id, is_aktif: !prog.is_aktif}) });
                         const d = await r.json();
                         if (d.ok) setProgramList(prev => prev.map(p => p.id === prog.id ? {...p, is_aktif: !p.is_aktif} : p));
                       }} className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors"
@@ -1644,7 +1644,7 @@ function AdminDashboardContent() {
                       </button>
                       <button onClick={async () => {
                         if (!confirm(`Hapus program "${prog.nama}"?`)) return;
-                        const r = await fetch("/api/program", { method: "DELETE", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: prog.id}) });
+                        const r = await fetch("/api/program", { method: "DELETE", headers:{"Content-Type":"application/json", "Authorization": `Bearer ${token}`}, body: JSON.stringify({id: prog.id}) });
                         const d = await r.json();
                         if (d.ok) setProgramList(prev => prev.filter(p => p.id !== prog.id));
                       }} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors">

@@ -1,6 +1,14 @@
-﻿import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase";
+import jwt from "jsonwebtoken";
+
+function verifyToken(req: NextRequest) {
+  if (!process.env.ADMIN_JWT_SECRET) throw new Error("ADMIN_JWT_SECRET is not set.");
+  const auth = req.headers.get("Authorization");
+  if (!auth) throw new Error("Unauthorized: missing token.");
+  jwt.verify(auth.replace("Bearer ", ""), process.env.ADMIN_JWT_SECRET);
+}
 
 export async function GET() {
   try {
@@ -15,20 +23,21 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   try {
+    verifyToken(req);
     const body = await req.json();
     const admin = createAdminClient();
     const updates = Object.entries(body).map(([key, value]) => ({ key, value: String(value) }));
     for (const { key, value } of updates) {
       await admin.from("pengaturan_psb").upsert({ key, value });
     }
-    // Invalidate halaman utama agar perubahan langsung tampil
     revalidatePath("/");
     revalidatePath("/galeri");
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Error";
-    return NextResponse.json({ ok: false, error: msg });
+    const status = msg.includes("Unauthorized") ? 401 : 500;
+    return NextResponse.json({ ok: false, error: msg }, { status });
   }
 }

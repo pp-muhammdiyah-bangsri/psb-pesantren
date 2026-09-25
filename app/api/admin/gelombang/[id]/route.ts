@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase";
 import jwt from "jsonwebtoken";
 
-const SECRET = process.env.ADMIN_JWT_SECRET || "psb-simple-pesantren-secret-2024";
+if (!process.env.ADMIN_JWT_SECRET) throw new Error("ADMIN_JWT_SECRET is not set.");
+const SECRET = process.env.ADMIN_JWT_SECRET;
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
