@@ -1,0 +1,46 @@
+﻿name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Jalankan setiap Rabu & Sabtu jam 07:00 WIB (00:00 UTC)
+    # Memastikan tidak pernah ada jeda lebih dari 5 hari
+    - cron: '0 0 * * 3,6'
+  workflow_dispatch: # Bisa dijalankan manual dari GitHub
+
+jobs:
+  ping:
+    name: Ping Supabase API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API Config (Keep Supabase Active)
+        run: |
+          echo "Waktu ping: $(date)"
+          echo "Target: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/site_config?select=id&limit=1" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}")
+
+          echo "HTTP Status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "Supabase aktif dan merespons dengan baik!"
+          elif [ "$HTTP_STATUS" -eq 503 ]; then
+            echo "PERINGATAN: Supabase mungkin sedang PAUSED!"
+            exit 1
+          else
+            echo "Response tidak terduga: $HTTP_STATUS"
+          fi
+
+      - name: Ping Storage Bucket
+        run: |
+          curl -s -o /dev/null -w "Storage ping status: %{http_code}\n" \
+            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/storage/v1/bucket" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
+
+      - name: Summary
+        run: |
+          echo "Keep-alive selesai pada $(date)"
+          echo "Ping berikutnya dalam ~4 hari"
