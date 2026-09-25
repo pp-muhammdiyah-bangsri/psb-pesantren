@@ -1,46 +1,56 @@
-﻿name: Supabase Keep-Alive
+name: Supabase & PSB Keep-Alive
 
 on:
   schedule:
-    # Jalankan setiap Rabu & Sabtu jam 07:00 WIB (00:00 UTC)
-    # Memastikan tidak pernah ada jeda lebih dari 5 hari
-    - cron: '0 0 * * 3,6'
-  workflow_dispatch: # Bisa dijalankan manual dari GitHub
+    # Berjalan setiap 2 hari sekali pada jam 23:00 UTC (06:00 WIB)
+    # Supabase free-tier pause setelah 7 hari tanpa interaksi.
+    # Dengan interval 2 hari, jeda maksimal hanya 48 jam sehingga database selalu aktif.
+    - cron: '0 23 */2 * *'
+  workflow_dispatch: # Memungkinkan tombol "Run workflow" manual dari tab Actions di GitHub
 
 jobs:
   ping:
-    name: Ping Supabase API
+    name: Ping Keep-Alive & Supabase
     runs-on: ubuntu-latest
     steps:
-      - name: Ping API Config (Keep Supabase Active)
+      - name: Ping Keep-Alive Endpoint (Vercel + Supabase)
         run: |
-          echo "Waktu ping: $(date)"
-          echo "Target: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
+          echo "Waktu eksekusi: $(date)"
+          SITE_URL="https://psb-ppmuhbangsri.vercel.app"
+          echo "Target Keep-Alive Endpoint: $SITE_URL/api/keep-alive"
 
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/site_config?select=id&limit=1" \
+          HTTP_STATUS=$(curl -s -o /tmp/keepalive_resp.json -w "%{http_code}" "$SITE_URL/api/keep-alive")
+          echo "HTTP Status Code: $HTTP_STATUS"
+          echo "Response Body:"
+          cat /tmp/keepalive_resp.json
+          echo ""
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "STATUS: SUKSES - Supabase dan Website PSB aktif normal!"
+          else
+            echo "WARNING: Endpoint keep-alive merespons status $HTTP_STATUS"
+          fi
+
+      - name: Direct Ping Supabase REST API (Opsional - jika secrets diisi)
+        if: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL != '' && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY != '' }}
+        run: |
+          echo "Target Supabase Direct: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
+          HTTP_STATUS=$(curl -s -o /tmp/supa_resp.json -w "%{http_code}" \
+            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/pengaturan_psb?select=key&limit=1" \
             -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}")
 
-          echo "HTTP Status: $HTTP_STATUS"
+          echo "Supabase Direct Status Code: $HTTP_STATUS"
+          cat /tmp/supa_resp.json
+          echo ""
 
           if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
-            echo "Supabase aktif dan merespons dengan baik!"
+            echo "STATUS: Direct REST Supabase query berhasil!"
           elif [ "$HTTP_STATUS" -eq 503 ]; then
-            echo "PERINGATAN: Supabase mungkin sedang PAUSED!"
+            echo "ERROR: Supabase ter-PAUSE (503 Service Unavailable)!"
             exit 1
-          else
-            echo "Response tidak terduga: $HTTP_STATUS"
           fi
 
-      - name: Ping Storage Bucket
+      - name: Selesai
         run: |
-          curl -s -o /dev/null -w "Storage ping status: %{http_code}\n" \
-            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/storage/v1/bucket" \
-            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}"
-
-      - name: Summary
-        run: |
-          echo "Keep-alive selesai pada $(date)"
-          echo "Ping berikutnya dalam ~4 hari"
+          echo "Keep-alive workflow selesai dijalankan pada $(date)"
