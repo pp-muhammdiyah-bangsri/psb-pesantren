@@ -1,4 +1,4 @@
-﻿interface ProgramItem {
+interface ProgramItem {
   id: number;
   nama: string;
   deskripsi: string;

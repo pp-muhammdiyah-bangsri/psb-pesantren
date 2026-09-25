@@ -1,4 +1,4 @@
-﻿import { createAdminClient } from "@/lib/supabase";
+import { createAdminClient } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import TentangSection from "@/components/TentangSection";
