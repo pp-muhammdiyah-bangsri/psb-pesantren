@@ -39,13 +39,13 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js butuh ini
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://*.googleapis.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://img.youtube.com https://i.ytimg.com https://qqqrhipksbxfokqzfysb.supabase.co",
+              "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.googleusercontent.com https://img.youtube.com https://i.ytimg.com https://qqqrhipksbxfokqzfysb.supabase.co https://*.googleapis.com https://*.gstatic.com https://maps.gstatic.com https://*.google.com",
               "media-src 'self' blob:",
-              "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
-              "connect-src 'self' https://qqqrhipksbxfokqzfysb.supabase.co https://lh3.googleusercontent.com",
+              "frame-src 'self' https://www.google.com https://maps.google.com https://*.google.com https://www.youtube.com https://www.youtube-nocookie.com",
+              "connect-src 'self' https://qqqrhipksbxfokqzfysb.supabase.co https://lh3.googleusercontent.com https://*.google.com https://*.googleapis.com",
             ].join("; "),
           },
           // Preconnect ke CDN utama untuk akselerasi DNS
