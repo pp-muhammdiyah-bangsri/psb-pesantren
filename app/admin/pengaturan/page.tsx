@@ -75,14 +75,7 @@ export default function AdminPengaturan() {
                 <input
                   type={type || "text"}
                   value={config[key] || ""}
-                  onChange={e => {
-                    let val = e.target.value;
-                    if (key === "maps_embed_url" && val.includes("<iframe")) {
-                      const m = val.match(/src=["']([^"']+)["']/i);
-                      if (m && m[1]) val = m[1];
-                    }
-                    set(key, val);
-                  }}
+                  onChange={e => set(key, e.target.value)}
                   className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                   style={{ borderColor: "#e0e0e0" }}
                 />

@@ -1,25 +1,9 @@
 "use client";
 import { MapPin, Phone, Mail, Clock, ExternalLink, Navigation } from "lucide-react";
+import { parseGoogleMapsEmbedUrl } from "@/lib/mapsHelper";
 
 interface LokasiSectionProps {
   config: Record<string, string>;
-}
-
-function getMapEmbedUrl(config: Record<string, string>): string {
-  const raw = config.maps_embed_url?.trim();
-  if (raw) {
-    if (raw.includes("<iframe")) {
-      const match = raw.match(/src=["']([^"']+)["']/i);
-      if (match && match[1]) return match[1];
-    }
-    if (raw.startsWith("http")) return raw;
-  }
-  // Fallback: Google Maps Embed gratis berbasis nama & alamat
-  const query = [
-    config.nama_pesantren || "Pondok Pesantren Muhammadiyah Bangsri",
-    config.alamat || "Bangsri, Jepara, Jawa Tengah",
-  ].filter(Boolean).join(", ");
-  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=16&ie=UTF8&iwloc=&output=embed`;
 }
 
 export default function LokasiSection({ config }: LokasiSectionProps) {
@@ -27,7 +11,8 @@ export default function LokasiSection({ config }: LokasiSectionProps) {
   const accent = config.warna_aksen || "#c8a84b";
   const nama = config.nama_pesantren || "Pondok Pesantren";
   const alamat = config.alamat || "Bangsri, Kabupaten Jepara, Jawa Tengah";
-  const embedUrl = getMapEmbedUrl(config);
+  
+  const embedUrl = parseGoogleMapsEmbedUrl(config.maps_embed_url, `${nama}, ${alamat}`);
 
   const directMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
     nama + " " + alamat
@@ -129,12 +114,12 @@ export default function LokasiSection({ config }: LokasiSectionProps) {
           </div>
 
           {/* Card Embed Google Maps */}
-          <div className="lg:col-span-7 bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100 flex flex-col min-h-[380px]">
-            <div className="relative w-full h-full min-h-[350px] rounded-2xl overflow-hidden border border-gray-200">
+          <div className="lg:col-span-7 bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100 flex flex-col min-h-[400px]">
+            <div className="relative w-full h-[380px] sm:h-[420px] lg:h-full min-h-[380px] rounded-2xl overflow-hidden border border-gray-200 bg-gray-100 shadow-inner">
               <iframe
                 src={embedUrl}
                 title={`Peta Lokasi ${nama}`}
-                className="w-full h-full min-h-[350px] border-0"
+                className="w-full h-full min-h-[380px] border-0"
                 loading="lazy"
                 allowFullScreen
                 referrerPolicy="no-referrer-when-downgrade"
@@ -146,7 +131,7 @@ export default function LokasiSection({ config }: LokasiSectionProps) {
                 href={directMapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-green-800 font-semibold hover:underline flex items-center gap-1"
+                className="text-green-800 font-semibold hover:underline flex items-center gap-1 font-medium"
               >
                 <span>Buka Peta Besar</span>
                 <ExternalLink size={12} />

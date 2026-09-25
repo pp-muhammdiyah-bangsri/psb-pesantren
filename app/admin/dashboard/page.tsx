@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { toDirectImageUrl, parseMediaUrl } from "@/lib/mediaUtils";
+import { parseGoogleMapsEmbedUrl, getMapsInputStatus } from "@/lib/mapsHelper";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Users, CheckCircle, XCircle, Clock, Download,
   Search, Filter, LogOut, Eye, X, ChevronDown,
   Palette, Calendar, Image as ImageIcon, ExternalLink,
   Save, Plus, Trash2, ToggleLeft, ToggleRight, Phone,
-  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Layers, FileText, FileCheck
+  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Layers, FileText, FileCheck, AlertTriangle, CheckCircle2, HelpCircle
 } from "lucide-react";
 import Link from "next/link";
 
@@ -1026,25 +1027,97 @@ function AdminDashboardContent() {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Link Embed Google Maps (Peta Lokasi Pesantren)</label>
-                      <input
-                        type="text"
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-xs font-bold text-gray-700">
+                          Kode / Link Embed Google Maps (Peta Lokasi Pesantren)
+                        </label>
+                        <span className="text-[11px] font-medium text-gray-400">
+                          Mendukung kode &lt;iframe&gt; atau link embed
+                        </span>
+                      </div>
+                      
+                      <textarea
+                        rows={3}
                         value={config.maps_embed_url || ""}
-                        onChange={(e) => {
-                          let val = e.target.value;
-                          if (val.includes("<iframe")) {
-                            const m = val.match(/src=["']([^"']+)["']/i);
-                            if (m && m[1]) val = m[1];
-                          }
-                          handleConfigChange("maps_embed_url", val);
-                        }}
-                        placeholder="Contoh: https://maps.google.com/maps?q=... atau salin kode <iframe> dari Google Maps"
-                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
+                        onChange={(e) => handleConfigChange("maps_embed_url", e.target.value)}
+                        placeholder={'Tempel (Paste) kode lengkap dari Google Maps di sini, contoh:\n<iframe src="https://www.google.com/maps/embed?pb=..." width="600" height="450" ...></iframe>'}
+                        className="w-full border rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50 font-mono leading-relaxed"
                         style={{ borderColor: "#e5e7eb" }}
                       />
-                      <span className="text-[11px] text-gray-400 block mt-1">
-                        Bisa paste link embed atau kode &lt;iframe&gt; dari Google Maps. Jika dikosongkan, sistem otomatis menampilkan peta lokasi berdasarkan nama & alamat pesantren.
-                      </span>
+
+                      {/* Status Deteksi Format */}
+                      {(() => {
+                        const status = getMapsInputStatus(config.maps_embed_url);
+                        if (status.type === "iframe") {
+                          return (
+                            <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800">
+                              <CheckCircle2 size={15} className="shrink-0 text-green-600" />
+                              <span><strong>Kode &lt;iframe&gt; terdeteksi:</strong> Kode valid! Sistem otomatis mengekstrak peta ini untuk ditampilkan di website.</span>
+                            </div>
+                          );
+                        }
+                        if (status.type === "embed_url") {
+                          return (
+                            <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800">
+                              <CheckCircle2 size={15} className="shrink-0 text-green-600" />
+                              <span><strong>Link Embed valid:</strong> Peta resmi Google Maps siap ditampilkan.</span>
+                            </div>
+                          );
+                        }
+                        if (status.type === "shortlink") {
+                          return (
+                            <div className="mt-2 flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+                              <AlertTriangle size={15} className="shrink-0 text-amber-600 mt-0.5" />
+                              <div>
+                                <strong>Perhatian (Share Link Terdeteksi):</strong> Google Maps melarang link pendek <em>(maps.app.goo.gl)</em> ditampilkan di dalam website (ditolak oleh browser). Agar peta tampil, gunakan menu <strong>Bagikan &gt; Sematkan peta (Embed a map) &gt; Salin HTML</strong> seperti panduan di bawah.
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            💡 <em>Jika dikosongkan, sistem secara otomatis menampilkan peta lokasi Google Maps berdasarkan Nama &amp; Alamat Pesantren.</em>
+                          </p>
+                        );
+                      })()}
+
+                      {/* Panduan Singkat Cara Salin Embed dari Google Maps */}
+                      <div className="mt-2.5 p-3 bg-gray-50 rounded-xl border border-gray-200/70 text-[11px] text-gray-600 space-y-1">
+                        <div className="font-bold text-gray-700 flex items-center gap-1.5">
+                          <HelpCircle size={13} className="text-gray-500" />
+                          <span>Cara Mengambil Kode Embed Google Maps yang Benar:</span>
+                        </div>
+                        <ol className="list-decimal list-inside space-y-0.5 pl-1 text-gray-500">
+                          <li>Buka <strong>Google Maps</strong> di browser/komputer lalu cari lokasi pesantren Anda.</li>
+                          <li>Klik tombol <strong>Bagikan (Share)</strong> di sebelah kiri.</li>
+                          <li>Pilih tab <strong>Sematkan peta (Embed a map)</strong> (jangan pilih tab "Kirim link").</li>
+                          <li>Klik tombol <strong>SALIN HTML</strong>, lalu langsung tempelkan (Paste) di kotak di atas.</li>
+                        </ol>
+                      </div>
+
+                      {/* Live Interactive Map Preview in Admin */}
+                      <div className="mt-3 border rounded-2xl p-3 bg-white shadow-sm" style={{ borderColor: "#e5e7eb" }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                            <MapPin size={14} style={{ color: primaryColor }} />
+                            <span>Pratinjau Tampilan Peta Langsung:</span>
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                            {config.maps_embed_url ? "Peta Kustom Aktif" : "Pencarian Otomatis Aktif"}
+                          </span>
+                        </div>
+                        <div className="w-full h-48 rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
+                          <iframe
+                            src={parseGoogleMapsEmbedUrl(
+                              config.maps_embed_url,
+                              (config.nama_pesantren || "Pondok Pesantren") + ", " + (config.alamat || "Bangsri, Jepara")
+                            )}
+                            className="w-full h-full border-0"
+                            loading="lazy"
+                            title="Pratinjau Peta Lokasi"
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     <div className="sm:col-span-2">
