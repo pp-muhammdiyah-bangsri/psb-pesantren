@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   User, MapPin, GraduationCap, Users, Upload,
-  CheckCircle, ArrowLeft, ArrowRight, Send, BookOpen, AlertCircle
+  CheckCircle, ArrowLeft, ArrowRight, Send, BookOpen, AlertCircle, FileCheck, X
 } from "lucide-react";
 
 const PROVINSI = [
@@ -22,7 +22,18 @@ const STEPS = [
   { id: 1, label: "Jalur & Biodata", icon: User },
   { id: 2, label: "Pendidikan & Alamat", icon: MapPin },
   { id: 3, label: "Orang Tua / Wali", icon: Users },
-  { id: 4, label: "Dokumen Persyaratan", icon: Upload },
+  { id: 4, label: "Dokumen & Syarat", icon: Upload },
+];
+
+const DEFAULT_SYARAT = [
+  "Calon santri beragama Islam dan berakhlak mulia.",
+  "Telah lulus atau berada di tingkat akhir jenjang pendidikan sebelumnya (SD/MI untuk SMP, atau SMP/MTs untuk SMA/SMK).",
+  "Mengisi data formulir pendaftaran secara lengkap, benar, dan dapat dipertanggungjawabkan sesuai dokumen kependudukan.",
+  "Mengunggah berkas persyaratan: Pas Foto (3x4), Kartu Keluarga, dan Akta Kelahiran (maksimal 1MB per berkas).",
+  "Khusus calon pendaftar Jalur Beasiswa LKSA (Gratis), wajib melampirkan Surat Keterangan Tidak Mampu (SKTM) atau Surat Keterangan Kematian Orang Tua dari instansi berwenang.",
+  "Bersedia mengikuti seluruh rangkaian tes seleksi (membaca Al-Qur'an, tes potensi akademik, dan wawancara santri serta wali) sesuai jadwal.",
+  "Bersedia mematuhi dan menaati seluruh tata tertib, disiplin pondok pesantren, dan peraturan sekolah formal yang dipilih.",
+  "Menyerahkan berkas fisik asli saat verifikasi akhir / daftar ulang di sekretariat pondok pesantren.",
 ];
 
 type FormData = Record<string, string | File | null>;
@@ -142,6 +153,8 @@ function DaftarForm() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ nomor: string } | null>(null);
   const [error, setError] = useState("");
+  const [setujuSyarat, setSetujuSyarat] = useState(false);
+  const [showSyaratModal, setShowSyaratModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/config").then(r => r.json()).then(d => { if (d.ok) setConfig(d.data); });
@@ -149,6 +162,10 @@ function DaftarForm() {
 
   const primary = config.warna_primer || "#0f4c1e";
   const accent = config.warna_aksen || "#c8a84b";
+
+  const syaratList = config.syarat_ketentuan
+    ? config.syarat_ketentuan.split("\n").map(s => s.trim()).filter(Boolean)
+    : DEFAULT_SYARAT;
 
   const set = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
   const setFile = (key: string, file: File | null) => setForm(prev => ({ ...prev, [key]: file }));
@@ -162,6 +179,10 @@ function DaftarForm() {
     if (step === 4) {
       if (form.jalur_pendaftaran === "lksa" && !form.sktm) {
         setError("Calon pendaftar jalur Beasiswa LKSA wajib mengunggah Surat Keterangan Tidak Mampu (SKTM).");
+        return false;
+      }
+      if (!setujuSyarat) {
+        setError("Anda wajib mencentang persetujuan Syarat & Ketentuan pendaftaran sebelum mengirim formulir.");
         return false;
       }
     }
@@ -239,17 +260,26 @@ function DaftarForm() {
   return (
     <div className="min-h-screen" style={{ background: `linear-gradient(160deg, ${primary} 0%, #0a3315 40%, #f8f9fa 40%)` }}>
       {/* Navbar mini */}
-      <nav className="px-6 py-4 flex items-center gap-3" style={{ background: `${primary}f0` }}>
-        <Link href="/" className="text-white/70 hover:text-white flex items-center gap-2 text-sm">
-          <ArrowLeft size={16} /> Beranda
-        </Link>
-        <span className="text-white/30">|</span>
-        <span className="text-white text-sm font-semibold">Formulir Pendaftaran Santri Baru</span>
+      <nav className="px-6 py-4 flex items-center justify-between" style={{ background: `${primary}f0` }}>
+        <div className="flex items-center gap-3">
+          <Link href="/" className="text-white/70 hover:text-white flex items-center gap-2 text-sm">
+            <ArrowLeft size={16} /> Beranda
+          </Link>
+          <span className="text-white/30">|</span>
+          <span className="text-white text-sm font-semibold">Formulir Pendaftaran Santri Baru</span>
+        </div>
+        <button
+          onClick={() => setShowSyaratModal(true)}
+          className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all text-white bg-white/10 hover:bg-white/20 border border-white/20"
+        >
+          <FileCheck size={14} style={{ color: accent }} />
+          <span>Syarat & Ketentuan</span>
+        </button>
       </nav>
 
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div className="max-w-2xl mx-auto px-4 py-8">
         {/* Progress Steps */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           {STEPS.map((s, idx) => {
             const Icon = s.icon;
             const active = s.id === step;
@@ -283,10 +313,17 @@ function DaftarForm() {
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           <div className="p-1.5" style={{ background: `linear-gradient(90deg, ${primary}, ${accent}, ${primary})` }} />
           <div className="p-6 sm:p-8">
-            <h2 className="text-xl font-bold mb-1" style={{ color: primary }}>
-              {STEPS[step - 1].label}
-            </h2>
-            <p className="text-gray-400 text-sm mb-6">Langkah {step} dari {STEPS.length}</p>
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-xl font-bold" style={{ color: primary }}>
+                {STEPS[step - 1].label}
+              </h2>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                Langkah {step} dari {STEPS.length}
+              </span>
+            </div>
+            <p className="text-gray-400 text-xs mb-6">
+              Pastikan seluruh informasi diisi dengan teliti dan sesuai dengan data resmi.
+            </p>
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-5 flex items-center gap-2">
@@ -450,36 +487,63 @@ function DaftarForm() {
               </div>
             )}
 
-            {/* Step 4: Dokumen */}
+            {/* Step 4: Dokumen & Syarat Ketentuan */}
             {step === 4 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="sm:col-span-2">
-                  <FileField label="Pas Foto Santri (3x4)" name="foto" onChange={setFile} required />
-                </div>
-                <FileField label="Kartu Keluarga (KK)" name="kk" onChange={setFile} />
-                <FileField label="Akta Kelahiran" name="akta" onChange={setFile} />
-
-                {/* Upload Khusus Santri LKSA */}
-                {form.jalur_pendaftaran === "lksa" && (
-                  <div className="sm:col-span-2 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-2">
-                    <div className="flex items-center gap-1.5 text-amber-900 font-bold text-sm">
-                      <AlertCircle size={16} className="text-amber-700" />
-                      <span>Berkas Wajib untuk Jalur Santri LKSA (Gratis):</span>
-                    </div>
-                    <FileField
-                      label="Surat Keterangan Tidak Mampu (SKTM) / Keterangan Yatim"
-                      name="sktm"
-                      onChange={setFile}
-                      required
-                    />
-                    <p className="text-xs text-amber-700 leading-relaxed">
-                      Lampirkan scan / foto Surat Keterangan Tidak Mampu dari Kelurahan/Desa atau Surat Keterangan Kematian Orang Tua (maksimal 1MB).
-                    </p>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="sm:col-span-2">
+                    <FileField label="Pas Foto Santri (3x4)" name="foto" onChange={setFile} required />
                   </div>
-                )}
+                  <FileField label="Kartu Keluarga (KK)" name="kk" onChange={setFile} />
+                  <FileField label="Akta Kelahiran" name="akta" onChange={setFile} />
 
-                <div className="sm:col-span-2 bg-blue-50 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-800 leading-relaxed">
-                  <strong>💡 Catatan Berkas:</strong> File yang diunggah maksimal berukuran <strong>1MB per dokumen</strong> (format JPG, PNG, atau PDF). Dokumen fisik asli akan diperiksa panitia saat daftar ulang / verifikasi di pondok pesantren.
+                  {/* Upload Khusus Santri LKSA */}
+                  {form.jalur_pendaftaran === "lksa" && (
+                    <div className="sm:col-span-2 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-2">
+                      <div className="flex items-center gap-1.5 text-amber-900 font-bold text-sm">
+                        <AlertCircle size={16} className="text-amber-700" />
+                        <span>Berkas Wajib untuk Jalur Santri LKSA (Gratis):</span>
+                      </div>
+                      <FileField
+                        label="Surat Keterangan Tidak Mampu (SKTM) / Keterangan Yatim"
+                        name="sktm"
+                        onChange={setFile}
+                        required
+                      />
+                      <p className="text-xs text-amber-700 leading-relaxed">
+                        Lampirkan scan / foto Surat Keterangan Tidak Mampu dari Kelurahan/Desa atau Surat Keterangan Kematian Orang Tua (maksimal 1MB).
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Kotak Syarat & Ketentuan Pendaftaran */}
+                <div className="p-4 sm:p-5 rounded-2xl border border-gray-200 bg-gray-50/70 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileCheck size={18} style={{ color: primary }} />
+                    <h3 className="font-bold text-sm text-gray-900">Syarat & Ketentuan Pendaftaran</h3>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto pr-2 space-y-2 text-xs text-gray-600 bg-white p-3.5 rounded-xl border border-gray-100 leading-relaxed">
+                    {syaratList.map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <span className="font-bold text-green-800 shrink-0">{idx + 1}.</span>
+                        <span>{item.replace(/^\d+[\.\)]\s*/, "")}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <label className="flex items-start gap-3 p-3 rounded-xl border border-green-200 bg-green-50/60 cursor-pointer hover:bg-green-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={setujuSyarat}
+                      onChange={(e) => setSetujuSyarat(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 text-green-700 rounded focus:ring-green-600 cursor-pointer shrink-0"
+                    />
+                    <span className="text-xs text-green-950 font-medium leading-relaxed">
+                      Saya menyatakan bahwa seluruh data yang diisi adalah benar, dokumen yang dilampirkan adalah sah, dan saya bersedia menaati seluruh <strong>Syarat, Ketentuan, serta Tata Tertib</strong> pondok pesantren.
+                    </span>
+                  </label>
                 </div>
               </div>
             )}
@@ -506,6 +570,45 @@ function DaftarForm() {
           </div>
         </div>
       </div>
+
+      {/* Modal Syarat & Ketentuan Pop-up */}
+      {showSyaratModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b mb-4">
+              <div className="flex items-center gap-2">
+                <FileCheck size={20} style={{ color: primary }} />
+                <h3 className="font-extrabold text-base text-gray-900">Syarat & Ketentuan Pendaftaran</h3>
+              </div>
+              <button onClick={() => setShowSyaratModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-2.5 text-xs text-gray-700 leading-relaxed mb-6">
+              {syaratList.map((item, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 p-2 rounded-lg bg-gray-50">
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: primary }}>
+                    {idx + 1}
+                  </span>
+                  <span>{item.replace(/^\d+[\.\)]\s*/, "")}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-right">
+              <button
+                type="button"
+                onClick={() => setShowSyaratModal(false)}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
+                style={{ background: primary }}
+              >
+                Saya Mengerti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

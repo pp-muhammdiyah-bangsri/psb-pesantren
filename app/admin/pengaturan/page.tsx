@@ -40,6 +40,8 @@ export default function AdminPengaturan() {
     { key: "tagline", label: "Tagline / Moto" },
     { key: "alamat", label: "Alamat Pesantren" },
     { key: "no_wa_admin", label: "No WhatsApp Admin (format: 628xxx)", type: "tel" },
+    { key: "maps_embed_url", label: "Link Embed Google Maps (URL / kode iframe)" },
+    { key: "syarat_ketentuan", label: "Syarat & Ketentuan Pendaftaran (1 poin per baris)", type: "textarea" },
     { key: "tahun_berdiri", label: "Tahun Berdiri" },
     { key: "jumlah_santri", label: "Jumlah Santri (tampilan)" },
     { key: "program_pendidikan", label: "Program Pendidikan (pisah koma)" },
@@ -60,11 +62,31 @@ export default function AdminPengaturan() {
           {fields.map(({ key, label, type, required }) => (
             <div key={key} className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">{label} {required && <span className="text-red-500">*</span>}</label>
-              <input
-                type={type || "text"} value={config[key] || ""} onChange={e => set(key, e.target.value)}
-                className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                style={{ borderColor: "#e0e0e0" }}
-              />
+              {type === "textarea" ? (
+                <textarea
+                  rows={6}
+                  value={config[key] || ""}
+                  onChange={e => set(key, e.target.value)}
+                  placeholder="Tuliskan poin-poin syarat dan ketentuan pendaftaran..."
+                  className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 font-mono leading-relaxed"
+                  style={{ borderColor: "#e0e0e0" }}
+                />
+              ) : (
+                <input
+                  type={type || "text"}
+                  value={config[key] || ""}
+                  onChange={e => {
+                    let val = e.target.value;
+                    if (key === "maps_embed_url" && val.includes("<iframe")) {
+                      const m = val.match(/src=["']([^"']+)["']/i);
+                      if (m && m[1]) val = m[1];
+                    }
+                    set(key, val);
+                  }}
+                  className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e0e0e0" }}
+                />
+              )}
             </div>
           ))}
           <div className="grid grid-cols-2 gap-4">

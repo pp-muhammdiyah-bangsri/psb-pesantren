@@ -5,6 +5,7 @@ import TentangSection from "@/components/TentangSection";
 import ProgramSection from "@/components/ProgramSection";
 import GelombangSection from "@/components/GelombangSection";
 import GaleriSection from "@/components/GaleriSection";
+import LokasiSection from "@/components/LokasiSection";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import Footer from "@/components/Footer";
 
@@ -81,6 +82,7 @@ export default async function HomePage() {
       <ProgramSection programs={programs} config={config} />
       <GelombangSection gelombang={gelombang} config={config} />
       <GaleriSection galeri={galeri} config={config} />
+      <LokasiSection config={config} />
       <WhatsAppButton noWa={config.no_wa_admin} />
       <Footer config={config} />
     </main>

@@ -53,12 +53,15 @@ export default function Navbar({ config }: NavbarProps) {
             <Link href="/#galeri" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
               Galeri
             </Link>
+            <Link href="/#lokasi" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+              Lokasi
+            </Link>
             <Link href="/#tentang" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
               Tentang Kami
             </Link>
             <Link
               href="/daftar"
-              className="px-5 py-2 rounded-full font-semibold text-sm transition-all hover:opacity-90 hover:scale-105"
+              className="px-5 py-2 rounded-full font-semibold text-sm transition-all hover:opacity-90 hover:scale-105 shadow-md"
               style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, color: primary }}
             >
               Daftar Sekarang
@@ -84,14 +87,17 @@ export default function Navbar({ config }: NavbarProps) {
           <Link href="/#galeri" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
             Galeri
           </Link>
+          <Link href="/#lokasi" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
+            Lokasi Peta
+          </Link>
           <Link href="/#tentang" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
             Tentang Kami
           </Link>
           <Link
             href="/daftar"
             onClick={() => setOpen(false)}
-            className="block text-center py-2 rounded-full font-semibold text-sm mt-2"
-            style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, color: primary }}
+            className="block text-center py-2.5 rounded-full font-bold text-sm shadow"
+            style={{ background: accent, color: primary }}
           >
             Daftar Sekarang
           </Link>

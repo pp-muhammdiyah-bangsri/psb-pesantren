@@ -7,7 +7,7 @@ import {
   Search, Filter, LogOut, Eye, X, ChevronDown,
   Palette, Calendar, Image as ImageIcon, ExternalLink,
   Save, Plus, Trash2, ToggleLeft, ToggleRight, Phone,
-  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Layers, FileText
+  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Layers, FileText, FileCheck
 } from "lucide-react";
 import Link from "next/link";
 
@@ -1026,6 +1026,28 @@ function AdminDashboardContent() {
                     </div>
 
                     <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Link Embed Google Maps (Peta Lokasi Pesantren)</label>
+                      <input
+                        type="text"
+                        value={config.maps_embed_url || ""}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          if (val.includes("<iframe")) {
+                            const m = val.match(/src=["']([^"']+)["']/i);
+                            if (m && m[1]) val = m[1];
+                          }
+                          handleConfigChange("maps_embed_url", val);
+                        }}
+                        placeholder="Contoh: https://maps.google.com/maps?q=... atau salin kode <iframe> dari Google Maps"
+                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
+                        style={{ borderColor: "#e5e7eb" }}
+                      />
+                      <span className="text-[11px] text-gray-400 block mt-1">
+                        Bisa paste link embed atau kode &lt;iframe&gt; dari Google Maps. Jika dikosongkan, sistem otomatis menampilkan peta lokasi berdasarkan nama & alamat pesantren.
+                      </span>
+                    </div>
+
+                    <div className="sm:col-span-2">
                       <label className="block text-xs font-bold text-gray-700 mb-1.5">Link Video Profil YouTube (Opsional)</label>
                       <input
                         type="text"
@@ -1236,6 +1258,36 @@ function AdminDashboardContent() {
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* 5. Syarat & Ketentuan Formulir PSB */}
+                <div className="bg-white rounded-2xl p-6 shadow-sm border" style={{ borderColor: "#f0f0f0" }}>
+                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b" style={{ borderColor: "#f0f0f0" }}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: primaryColor }}>
+                      <FileCheck size={16} />
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold text-gray-900">5. Syarat & Ketentuan Formulir PSB</h2>
+                      <p className="text-xs text-gray-500">Ketentuan resmi pendaftaran yang tampil dan wajib disetujui calon santri / wali di form pendaftaran</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                      Poin-poin Persyaratan & Ketentuan (Tulis satu poin per baris)
+                    </label>
+                    <textarea
+                      rows={8}
+                      value={config.syarat_ketentuan || ""}
+                      onChange={(e) => handleConfigChange("syarat_ketentuan", e.target.value)}
+                      placeholder="Contoh:&#10;1. Calon santri beragama Islam dan berakhlak mulia.&#10;2. Berijazah / lulus jenjang sebelumnya (SD/MI untuk SMP, SMP/MTs untuk SMA/SMK).&#10;3. Mengisi data formulir pendaftaran dengan benar dan jujur.&#10;4. Melampirkan berkas Pas Foto, Kartu Keluarga, dan Akta Kelahiran (format JPG/PNG/PDF maks 1MB).&#10;5. Khusus pendaftar santri LKSA (Gratis), wajib melampirkan Surat Keterangan Tidak Mampu (SKTM).&#10;6. Bersedia mentaati seluruh tata tertib pesantren dan sekolah."
+                      className="w-full border rounded-xl p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50 font-mono leading-relaxed"
+                      style={{ borderColor: "#e5e7eb" }}
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1.5">
+                      💡 <strong>Tips:</strong> Jika dikosongkan, form pendaftaran akan otomatis menggunakan 8 butir syarat standar sistem. Anda dapat merinci syarat khusus pesantren Anda di sini.
+                    </p>
                   </div>
                 </div>
 
