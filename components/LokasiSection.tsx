@@ -12,6 +12,17 @@ export default function LokasiSection({ config }: LokasiSectionProps) {
   const nama = config.nama_pesantren || "Pondok Pesantren";
   const alamat = config.alamat || "Bangsri, Kabupaten Jepara, Jawa Tengah";
   
+  // Kustomisasi teks dinamis
+  const badge = config.lokasi_badge || "Lokasi & Kunjungan";
+  const judul = config.lokasi_judul || "Lokasi Pondok Pesantren";
+  const deskripsi =
+    config.lokasi_deskripsi ||
+    "Silakan berkunjung langsung ke sekretariat PSB untuk konsultasi program, survei asrama, atau verifikasi berkas pendaftaran santri baru.";
+  const cardBadge = config.lokasi_card_badge || "Sekretariat PSB";
+  const jamLayanan = config.jam_layanan || "Senin - Sabtu: 08.00 - 15.00 WIB";
+  const jamKeterangan = config.lokasi_jam_keterangan || "Ahad & Hari Libur: Dengan Konfirmasi Panitia";
+  const ctaArah = config.lokasi_cta_arah || "Petunjuk Arah Google Maps ↗";
+
   const embedUrl = parseGoogleMapsEmbedUrl(config.maps_embed_url, `${nama}, ${alamat}`);
 
   const directMapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -24,17 +35,17 @@ export default function LokasiSection({ config }: LokasiSectionProps) {
         {/* Section Header */}
         <div className="text-center mb-12">
           <p className="text-xs sm:text-sm font-bold uppercase tracking-widest mb-2" style={{ color: accent }}>
-            Lokasi & Kunjungan
+            {badge}
           </p>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{ color: primary }}>
-            Lokasi Pondok Pesantren
+            {judul}
           </h2>
           <div
             className="w-16 h-1 mx-auto rounded-full mb-4"
             style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }}
           />
-          <p className="text-sm text-gray-500 max-w-xl mx-auto">
-            Silakan berkunjung langsung ke sekretariat PSB untuk konsultasi program, survei asrama, atau verifikasi berkas pendaftaran santri baru.
+          <p className="text-sm text-gray-500 max-w-xl mx-auto leading-relaxed">
+            {deskripsi}
           </p>
         </div>
 
@@ -45,7 +56,7 @@ export default function LokasiSection({ config }: LokasiSectionProps) {
             <div className="space-y-6">
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-green-900 bg-green-50 px-3 py-1 rounded-full border border-green-200">
-                  Sekretariat PSB
+                  {cardBadge}
                 </span>
                 <h3 className="text-lg font-bold text-gray-900 mt-3">{nama}</h3>
               </div>
@@ -75,9 +86,11 @@ export default function LokasiSection({ config }: LokasiSectionProps) {
                 <div>
                   <h4 className="text-xs font-bold uppercase text-gray-500 tracking-wider">Jam Pelayanan PSB</h4>
                   <p className="text-sm font-semibold text-gray-800 mt-1">
-                    {config.jam_layanan || "Senin - Sabtu: 08.00 - 15.00 WIB"}
+                    {jamLayanan}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">Ahad & Hari Libur: Dengan Konfirmasi Panitia</p>
+                  {jamKeterangan && (
+                    <p className="text-xs text-gray-400 mt-0.5">{jamKeterangan}</p>
+                  )}
                 </div>
               </div>
 
@@ -108,7 +121,7 @@ export default function LokasiSection({ config }: LokasiSectionProps) {
                 style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}
               >
                 <Navigation size={16} />
-                <span>Petunjuk Arah Google Maps ↗</span>
+                <span>{ctaArah}</span>
               </a>
             </div>
           </div>

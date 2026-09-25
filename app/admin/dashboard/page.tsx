@@ -1331,6 +1331,86 @@ function AdminDashboardContent() {
                         </div>
                       </div>
                     </div>
+
+                    {/* E. Bagian Lokasi & Kunjungan */}
+                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
+                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Lokasi & Kunjungan</h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Atas</label>
+                          <input
+                            type="text"
+                            value={config.lokasi_badge || ""}
+                            onChange={(e) => handleConfigChange("lokasi_badge", e.target.value)}
+                            placeholder="Default: Lokasi & Kunjungan"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Utama</label>
+                          <input
+                            type="text"
+                            value={config.lokasi_judul || ""}
+                            onChange={(e) => handleConfigChange("lokasi_judul", e.target.value)}
+                            placeholder="Default: Lokasi Pondok Pesantren"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Kalimat Penjelas di Bawah Judul</label>
+                          <textarea
+                            rows={2}
+                            value={config.lokasi_deskripsi || ""}
+                            onChange={(e) => handleConfigChange("lokasi_deskripsi", e.target.value)}
+                            placeholder="Default: Silakan berkunjung langsung ke sekretariat PSB untuk konsultasi program, survei asrama, atau verifikasi berkas pendaftaran santri baru."
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Kartu Info</label>
+                          <input
+                            type="text"
+                            value={config.lokasi_card_badge || ""}
+                            onChange={(e) => handleConfigChange("lokasi_card_badge", e.target.value)}
+                            placeholder="Default: Sekretariat PSB"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Jam Pelayanan PSB</label>
+                          <input
+                            type="text"
+                            value={config.jam_layanan || ""}
+                            onChange={(e) => handleConfigChange("jam_layanan", e.target.value)}
+                            placeholder="Default: Senin - Sabtu: 08.00 - 15.00 WIB"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Keterangan Hari Libur</label>
+                          <input
+                            type="text"
+                            value={config.lokasi_jam_keterangan || ""}
+                            onChange={(e) => handleConfigChange("lokasi_jam_keterangan", e.target.value)}
+                            placeholder="Default: Ahad & Hari Libur: Dengan Konfirmasi Panitia"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Teks Tombol Petunjuk Arah</label>
+                          <input
+                            type="text"
+                            value={config.lokasi_cta_arah || ""}
+                            onChange={(e) => handleConfigChange("lokasi_cta_arah", e.target.value)}
+                            placeholder="Default: Petunjuk Arah Google Maps ↗"
+                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
