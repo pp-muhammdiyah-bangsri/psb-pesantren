@@ -3,25 +3,20 @@ import { createAdminClient } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-// [T-4] Rate limiting sederhana berbasis IP (in-memory)
-// Catatan: Di-reset setiap server restart — sudah cukup untuk mencegah brute force dasar
 const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 const MAX_ATTEMPTS = 5;
-const WINDOW_MS = 15 * 60 * 1000; // 15 menit
+const WINDOW_MS = 15 * 60 * 1000;
 
 function checkRateLimit(ip: string): { allowed: boolean; retryAfterMs?: number } {
   const now = Date.now();
   const record = loginAttempts.get(ip);
-
   if (!record || now > record.resetAt) {
     loginAttempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
     return { allowed: true };
   }
-
   if (record.count >= MAX_ATTEMPTS) {
     return { allowed: false, retryAfterMs: record.resetAt - now };
   }
-
   record.count += 1;
   return { allowed: true };
 }
@@ -31,13 +26,11 @@ function resetRateLimit(ip: string) {
 }
 
 export async function POST(req: NextRequest) {
-  // [K-2] Pastikan secret sudah dikonfigurasi
   if (!process.env.ADMIN_JWT_SECRET) {
     console.error("ADMIN_JWT_SECRET tidak dikonfigurasi!");
     return NextResponse.json({ ok: false, error: "Konfigurasi server tidak lengkap." }, { status: 500 });
   }
 
-  // [T-4] Cek rate limit berdasarkan IP
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
     || req.headers.get("x-real-ip")
     || "unknown";
@@ -53,7 +46,6 @@ export async function POST(req: NextRequest) {
 
   try {
     const { username, password } = await req.json();
-
     if (!username || !password) {
       return NextResponse.json({ ok: false, error: "Username dan password wajib diisi." }, { status: 400 });
     }
@@ -74,7 +66,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Password salah." }, { status: 401 });
     }
 
-    // Login berhasil — reset rate limit
     resetRateLimit(ip);
 
     const token = jwt.sign(

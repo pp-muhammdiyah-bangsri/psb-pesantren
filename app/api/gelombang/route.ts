@@ -9,7 +9,7 @@ function verifyToken(req: NextRequest) {
   jwt.verify(auth.replace("Bearer ", ""), process.env.ADMIN_JWT_SECRET);
 }
 
-// GET tetap publik — dibutuhkan form pendaftaran untuk menampilkan daftar gelombang
+// GET tetap publik - dibutuhkan form pendaftaran untuk menampilkan daftar gelombang
 export async function GET() {
   try {
     const admin = createAdminClient();

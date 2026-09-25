@@ -10,7 +10,7 @@ function verifyToken(req: NextRequest) {
   jwt.verify(auth.replace("Bearer ", ""), process.env.ADMIN_JWT_SECRET);
 }
 
-// GET tetap publik — digunakan landing page
+// GET tetap publik - digunakan landing page
 export async function GET() {
   try {
     const admin = createAdminClient();
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       .insert({
         nama: body.nama,
         deskripsi: body.deskripsi || "",
-        icon: body.icon || "?",
+        icon: body.icon || "\u2B50",
         warna: body.warna || "#0f4c1e",
         urutan: body.urutan || 99,
         is_aktif: body.is_aktif !== false,
