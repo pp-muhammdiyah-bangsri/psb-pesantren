@@ -11,20 +11,35 @@ const font = Plus_Jakarta_Sans({
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const { createAdminClient } = await import("@/lib/supabase");
+    const { toDirectImageUrl } = await import("@/lib/mediaUtils");
     const admin = createAdminClient();
     const { data } = await admin
       .from("pengaturan_psb")
       .select("key, value")
-      .in("key", ["nama_pesantren", "tagline"]);
+      .in("key", ["nama_pesantren", "tagline", "logo_url"]);
     const cfg = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]));
+    const logo = cfg.logo_url ? toDirectImageUrl(cfg.logo_url) : "/logo.jpg";
     return {
       title: `PSB ${cfg.nama_pesantren || "Pesantren"} | Pendaftaran Santri Baru`,
       description: cfg.tagline || "Pendaftaran Santri Baru Online",
+      icons: {
+        icon: [
+          { url: logo },
+          { url: "/favicon.ico" }
+        ],
+        shortcut: [logo],
+        apple: [logo],
+      },
     };
   } catch {
     return {
       title: "PSB Pesantren | Pendaftaran Santri Baru",
       description: "Pendaftaran Santri Baru Online",
+      icons: {
+        icon: "/favicon.ico",
+        shortcut: "/favicon.ico",
+        apple: "/favicon.ico",
+      },
     };
   }
 }
