@@ -153,3 +153,7 @@ CREATE TABLE IF NOT EXISTS pengajar (
 
 ALTER TABLE pengajar ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public_read_pengajar" ON pengajar FOR SELECT USING (true);
+
+-- Migration kolom gelar_depan & gelar_belakang untuk fleksibilitas nama akademik
+ALTER TABLE pengajar ADD COLUMN IF NOT EXISTS gelar_depan TEXT;
+ALTER TABLE pengajar ADD COLUMN IF NOT EXISTS gelar_belakang TEXT;

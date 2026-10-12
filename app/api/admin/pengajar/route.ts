@@ -31,10 +31,15 @@ export async function POST(req: NextRequest) {
     verifyToken(req);
     const body = await req.json();
     const admin = createAdminClient();
-    const { data, error } = await admin.from("pengajar").insert(body).select().single();
-    if (error) throw error;
+    let res = await admin.from("pengajar").insert(body).select().single();
+    if (res.error && res.error.message && res.error.message.includes("column")) {
+      // Fallback jika database belum ada kolom gelar_depan/gelar_belakang
+      const { gelar_depan, gelar_belakang, ...fallbackBody } = body;
+      res = await admin.from("pengajar").insert(fallbackBody).select().single();
+    }
+    if (res.error) throw res.error;
     revalidatePath("/");
-    return NextResponse.json({ ok: true, data });
+    return NextResponse.json({ ok: true, data: res.data });
   } catch (e: unknown) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Error" });
   }
@@ -46,10 +51,15 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const { id, ...updates } = body;
     const admin = createAdminClient();
-    const { data, error } = await admin.from("pengajar").update(updates).eq("id", id).select().single();
-    if (error) throw error;
+    let res = await admin.from("pengajar").update(updates).eq("id", id).select().single();
+    if (res.error && res.error.message && res.error.message.includes("column")) {
+      // Fallback jika database belum ada kolom gelar_depan/gelar_belakang
+      const { gelar_depan, gelar_belakang, ...fallbackUpdates } = updates;
+      res = await admin.from("pengajar").update(fallbackUpdates).eq("id", id).select().single();
+    }
+    if (res.error) throw res.error;
     revalidatePath("/");
-    return NextResponse.json({ ok: true, data });
+    return NextResponse.json({ ok: true, data: res.data });
   } catch (e: unknown) {
     return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Error" });
   }

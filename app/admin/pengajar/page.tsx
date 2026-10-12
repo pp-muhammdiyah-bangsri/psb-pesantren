@@ -2,15 +2,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Plus, Trash2, Save, User, Edit2, Award, ToggleLeft, ToggleRight, X, Upload
+  ArrowLeft, Plus, Trash2, Save, User, Edit2, Award, ToggleLeft, ToggleRight, X, Upload, Sparkles
 } from "lucide-react";
 import Link from "next/link";
+import { formatNamaGelar } from "@/components/PengajarSection";
 
 interface Pengajar {
   id?: number;
   nama: string;
   jabatan: string;
-  gelar: string;
+  gelar?: string;
+  gelar_depan?: string;
+  gelar_belakang?: string;
   bidang_studi: string;
   keterangan: string;
   foto_url: string;
@@ -20,8 +23,17 @@ interface Pengajar {
 }
 
 const INITIAL_FORM: Pengajar = {
-  nama: "", jabatan: "", gelar: "", bidang_studi: "",
-  keterangan: "", foto_url: "", is_pimpinan: false, is_aktif: true, urutan: 1
+  nama: "",
+  jabatan: "",
+  gelar: "",
+  gelar_depan: "",
+  gelar_belakang: "",
+  bidang_studi: "",
+  keterangan: "",
+  foto_url: "",
+  is_pimpinan: false,
+  is_aktif: true,
+  urutan: 1,
 };
 
 export default function AdminPengajar() {
@@ -75,11 +87,16 @@ export default function AdminPengajar() {
     setSaving(true); setMsg("");
     try {
       const method = editId ? "PUT" : "POST";
-      const body = editId ? { ...form, id: editId } : form;
+      const payload = {
+        ...form,
+        // Pastikan kompatibel dengan field `gelar` lama
+        gelar: form.gelar_belakang || form.gelar || form.gelar_depan || "",
+        id: editId || undefined,
+      };
       const res = await fetch("/api/admin/pengajar", {
         method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
       const d = await res.json();
       if (!d.ok) throw new Error(d.error);
@@ -109,7 +126,23 @@ export default function AdminPengajar() {
   };
 
   const startEdit = (p: Pengajar) => {
-    setForm({ ...p }); setEditId(p.id || null); setShowForm(true); setMsg("");
+    let gDepan = p.gelar_depan || "";
+    let gBelakang = p.gelar_belakang || "";
+    // Pisahkan otomatis jika data lama hanya terisi di `gelar`
+    if (!gDepan && !gBelakang && p.gelar) {
+      const g = p.gelar.trim();
+      const isPrefix = /^(kh|k\.h\.|kyai|dr|dr\.|drs|drs\.|dra|dra\.|prof|prof\.|ir|ir\.|ust|ust\.|ustadz|usth|usth\.|habib|gus|ning|tgk|buya)\b/i.test(g);
+      if (isPrefix) gDepan = g;
+      else gBelakang = g;
+    }
+    setForm({
+      ...p,
+      gelar_depan: gDepan,
+      gelar_belakang: gBelakang,
+    });
+    setEditId(p.id || null);
+    setShowForm(true);
+    setMsg("");
   };
 
   const primary = "#0f4c1e";
@@ -137,33 +170,118 @@ export default function AdminPengajar() {
           <div className={`text-sm rounded-xl px-4 py-3 mb-4 ${msg.includes("berhasil") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>{msg}</div>
         )}
 
-        {/* Form */}
+        {/* Form Modal / Box */}
         {showForm && (
           <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6" style={{ borderColor: "#f0f0f0" }}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-base text-gray-900">{editId ? "Edit Data Pengajar" : "Tambah Pengajar Baru"}</h2>
               <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { key: "nama", label: "Nama Lengkap", placeholder: "Ahmad Maulana", required: true },
-                { key: "jabatan", label: "Jabatan / Posisi", placeholder: "Mudir Pondok / Guru Tahfidz", required: true },
-                { key: "gelar", label: "Gelar Akademik", placeholder: "S.Pd.I, M.Ag, Lc." },
-                { key: "bidang_studi", label: "Bidang Studi / Keahlian", placeholder: "Tahfidz Al-Qur'an, Fiqih" },
-              ].map(({ key, label, placeholder, required }) => (
-                <div key={key} className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-gray-700">{label} {required && <span className="text-red-500">*</span>}</label>
-                  <input type="text" value={String((form as any)[key] ?? "")} onChange={e => setF(key, e.target.value)}
-                    placeholder={placeholder} className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" style={{ borderColor: "#e5e7eb" }} />
-                </div>
-              ))}
-              <div className="sm:col-span-2 flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-700">Biografi / Riwayat Singkat</label>
-                <textarea rows={3} value={form.keterangan} onChange={e => setF("keterangan", e.target.value)}
-                  placeholder="Alumnus Pondok Pesantren Gontor, menyelesaikan S2 di IAIN..."
-                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 leading-relaxed" style={{ borderColor: "#e5e7eb" }} />
-              </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Gelar Depan */}
               <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-gray-700">
+                  Gelar Depan <span className="text-[11px] font-normal text-gray-400">(Awalan)</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.gelar_depan || ""}
+                  onChange={e => setF("gelar_depan", e.target.value)}
+                  placeholder="Contoh: KH. / Dr. / Ust."
+                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e5e7eb" }}
+                />
+              </div>
+
+              {/* Nama Lengkap */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-gray-700">
+                  Nama Lengkap <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.nama}
+                  onChange={e => setF("nama", e.target.value)}
+                  placeholder="Contoh: Ahmad Maulana"
+                  className="border rounded-xl px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e5e7eb" }}
+                />
+              </div>
+
+              {/* Gelar Belakang / Akademik */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-gray-700">
+                  Gelar Belakang <span className="text-[11px] font-normal text-gray-400">(Akademik)</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.gelar_belakang || ""}
+                  onChange={e => setF("gelar_belakang", e.target.value)}
+                  placeholder="Contoh: S.Pt / S.Pd / M.Ag / Lc."
+                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e5e7eb" }}
+                />
+              </div>
+
+              {/* Live Preview Box Nama */}
+              <div className="sm:col-span-3 p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
+                    Preview Nama Tampil di Website:
+                  </span>
+                  <span className="text-base font-extrabold text-emerald-950">
+                    {formatNamaGelar(form) || "(Silakan isi nama)"}
+                  </span>
+                </div>
+                {form.is_pimpinan && (
+                  <span className="text-xs bg-amber-100 text-amber-800 border border-amber-300 font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <Award size={12} /> Pimpinan Pondok
+                  </span>
+                )}
+              </div>
+
+              {/* Jabatan */}
+              <div className="sm:col-span-1 flex flex-col gap-1">
+                <label className="text-xs font-bold text-gray-700">Jabatan / Posisi <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={form.jabatan}
+                  onChange={e => setF("jabatan", e.target.value)}
+                  placeholder="Mudir Pondok / Guru Tahfidz"
+                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e5e7eb" }}
+                />
+              </div>
+
+              {/* Bidang Studi */}
+              <div className="sm:col-span-2 flex flex-col gap-1">
+                <label className="text-xs font-bold text-gray-700">Bidang Studi / Keahlian</label>
+                <input
+                  type="text"
+                  value={form.bidang_studi}
+                  onChange={e => setF("bidang_studi", e.target.value)}
+                  placeholder="Tahfidz Al-Qur'an, Fiqih, Bahasa Arab"
+                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e5e7eb" }}
+                />
+              </div>
+
+              {/* Biografi */}
+              <div className="sm:col-span-3 flex flex-col gap-1">
+                <label className="text-xs font-bold text-gray-700">Biografi / Riwayat Singkat</label>
+                <textarea
+                  rows={3}
+                  value={form.keterangan}
+                  onChange={e => setF("keterangan", e.target.value)}
+                  placeholder="Alumnus Pondok Pesantren Gontor, menyelesaikan S2 di IAIN..."
+                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 leading-relaxed"
+                  style={{ borderColor: "#e5e7eb" }}
+                />
+              </div>
+
+              {/* Foto Profil */}
+              <div className="sm:col-span-2 flex flex-col gap-1">
                 <label className="text-xs font-bold text-gray-700">Foto Profil (Maks. 1MB)</label>
                 <div className="flex items-center gap-3">
                   {form.foto_url && <img src={form.foto_url} alt="Preview" className="w-12 h-12 rounded-lg object-cover border" />}
@@ -175,12 +293,22 @@ export default function AdminPengajar() {
                   {form.foto_url && <button onClick={() => setF("foto_url", "")} className="text-red-400 hover:text-red-600 text-xs">Hapus</button>}
                 </div>
               </div>
+
+              {/* Urutan */}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-bold text-gray-700">Urutan Tampil</label>
-                <input type="number" min={1} value={form.urutan} onChange={e => setF("urutan", Number(e.target.value))}
-                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" style={{ borderColor: "#e5e7eb" }} />
+                <input
+                  type="number"
+                  min={1}
+                  value={form.urutan}
+                  onChange={e => setF("urutan", Number(e.target.value))}
+                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  style={{ borderColor: "#e5e7eb" }}
+                />
               </div>
-              <div className="sm:col-span-2 flex flex-wrap items-center gap-6">
+
+              {/* Checkboxes */}
+              <div className="sm:col-span-3 flex flex-wrap items-center gap-6 pt-2">
                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
                   <input type="checkbox" checked={form.is_pimpinan} onChange={e => setF("is_pimpinan", e.target.checked)} className="w-4 h-4 rounded" />
                   <Award size={15} style={{ color: accent }} /> Tandai sebagai Pimpinan Pondok
@@ -191,10 +319,14 @@ export default function AdminPengajar() {
                 </label>
               </div>
             </div>
+
             <div className="flex gap-3 mt-5 pt-4 border-t" style={{ borderColor: "#f0f0f0" }}>
-              <button onClick={save} disabled={saving}
+              <button
+                onClick={save}
+                disabled={saving}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 disabled:opacity-60"
-                style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}>
+                style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}
+              >
                 <Save size={15} /> {saving ? "Menyimpan..." : (editId ? "Update Data" : "Simpan")}
               </button>
               <button onClick={() => setShowForm(false)} className="px-4 py-2.5 rounded-xl border text-sm font-medium text-gray-600 hover:bg-gray-50" style={{ borderColor: "#e5e7eb" }}>Batal</button>
@@ -202,7 +334,7 @@ export default function AdminPengajar() {
           </div>
         )}
 
-        {/* Daftar */}
+        {/* Daftar Pengajar */}
         {loading ? (
           <div className="text-center py-16 text-gray-400">Memuat data...</div>
         ) : list.length === 0 ? (
@@ -213,32 +345,35 @@ export default function AdminPengajar() {
           </div>
         ) : (
           <div className="space-y-3">
-            {list.map(p => (
-              <div key={p.id} className="bg-white rounded-2xl shadow-sm border p-4 flex items-center gap-4" style={{ borderColor: "#f0f0f0" }}>
-                {p.foto_url ? (
-                  <img src={p.foto_url} alt={p.nama} className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0" />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}>
-                    {p.nama.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
+            {list.map(p => {
+              const formattedName = formatNamaGelar(p);
+              return (
+                <div key={p.id} className="bg-white rounded-2xl shadow-sm border p-4 flex items-center gap-4" style={{ borderColor: "#f0f0f0" }}>
+                  {p.foto_url ? (
+                    <img src={p.foto_url} alt={p.nama} className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}>
+                      {p.nama.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-sm text-gray-900 truncate">{formattedName}</p>
+                      {p.is_pimpinan && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: `${accent}20`, color: "#8a6b1e" }}>Pimpinan</span>}
+                      {!p.is_aktif && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-500">Tersembunyi</span>}
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">{p.jabatan}{p.bidang_studi ? ` · ${p.bidang_studi}` : ""}</p>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-sm text-gray-900 truncate">{p.gelar ? `${p.gelar} ${p.nama}` : p.nama}</p>
-                    {p.is_pimpinan && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: `${accent}20`, color: "#8a6b1e" }}>Pimpinan</span>}
-                    {!p.is_aktif && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-500">Tersembunyi</span>}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => toggleAktif(p)} title="Toggle tampil" className="text-gray-400 hover:text-green-600">
+                      {p.is_aktif ? <ToggleRight size={22} className="text-green-500" /> : <ToggleLeft size={22} />}
+                    </button>
+                    <button onClick={() => startEdit(p)} className="text-gray-400 hover:text-blue-600"><Edit2 size={16} /></button>
+                    <button onClick={() => hapus(p.id!)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{p.jabatan}{p.bidang_studi ? ` · ${p.bidang_studi}` : ""}</p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => toggleAktif(p)} title="Toggle tampil" className="text-gray-400 hover:text-green-600">
-                    {p.is_aktif ? <ToggleRight size={22} className="text-green-500" /> : <ToggleLeft size={22} />}
-                  </button>
-                  <button onClick={() => startEdit(p)} className="text-gray-400 hover:text-blue-600"><Edit2 size={16} /></button>
-                  <button onClick={() => hapus(p.id!)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

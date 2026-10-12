@@ -3,11 +3,13 @@ import { useState } from "react";
 import { X, GraduationCap, BookOpen, Award } from "lucide-react";
 import { toDirectImageUrl } from "@/lib/mediaUtils";
 
-interface Pengajar {
+export interface Pengajar {
   id: number;
   nama: string;
   jabatan: string;
   gelar?: string;
+  gelar_depan?: string;
+  gelar_belakang?: string;
   bidang_studi?: string;
   keterangan?: string;
   foto_url?: string;
@@ -20,6 +22,110 @@ interface PengajarSectionProps {
   config: Record<string, string>;
 }
 
+/**
+ * Helper memformat nama lengkap dengan gelar depan & belakang secara cerdas.
+ * Menangani kasus gelar depan (KH, Dr, Prof, Ust) vs gelar akademik belakang (S.Pt, M.Pd, Lc, dll.)
+ */
+export function formatNamaGelar(p: {
+  nama: string;
+  gelar_depan?: string;
+  gelar_belakang?: string;
+  gelar?: string;
+}): string {
+  let depan = (p.gelar_depan || "").trim();
+  let belakang = (p.gelar_belakang || "").trim();
+
+  // Jika data lama hanya mengisi field `gelar`
+  if (!depan && !belakang && p.gelar) {
+    const g = p.gelar.trim();
+    const isPrefix = /^(kh|k\.h\.|kyai|dr|dr\.|drs|drs\.|dra|dra\.|prof|prof\.|ir|ir\.|ust|ust\.|ustadz|usth|usth\.|habib|gus|ning|tgk|buya)\b/i.test(g);
+    if (isPrefix) {
+      depan = g;
+    } else {
+      belakang = g;
+    }
+  }
+
+  let hasil = p.nama.trim();
+  if (depan) {
+    hasil = `${depan} ${hasil}`;
+  }
+  if (belakang) {
+    const cleanBelakang = belakang.replace(/^,\s*/, "");
+    hasil = `${hasil}, ${cleanBelakang}`;
+  }
+  return hasil;
+}
+
+const DEFAULT_PENGAJAR: Pengajar[] = [
+  {
+    id: 1,
+    nama: "Abdullah Maksum",
+    jabatan: "Pengasuh & Pimpinan Pondok Pesantren",
+    gelar_depan: "KH.",
+    gelar_belakang: "M.Ag",
+    bidang_studi: "Tafsir & Ulumul Qur'an",
+    keterangan: "Pengasuh pondok dengan pengalaman lebih dari 25 tahun membina santri, mendalami keilmuan Islam klasik di pesantren salaf dan menyelesaikan pascasarjana di UIN.",
+    is_pimpinan: true,
+    urutan: 1,
+  },
+  {
+    id: 2,
+    nama: "Muhammad Fauzan",
+    jabatan: "Direktur Pendidikan & Kurikulum",
+    gelar_depan: "Dr. H.",
+    gelar_belakang: "Lc., M.A.",
+    bidang_studi: "Bahasa Arab & Hadits",
+    keterangan: "Lulusan Universitas Al-Azhar Kairo, Mesir. Berdedikasi mengintegrasikan kurikulum agama dan kurikulum formal modern.",
+    is_pimpinan: true,
+    urutan: 2,
+  },
+  {
+    id: 3,
+    nama: "Ridhwan",
+    jabatan: "Kepala Halaqah Tahfidz Al-Qur'an",
+    gelar_depan: "Ust.",
+    gelar_belakang: "Al-Hafizh",
+    bidang_studi: "Tahfidz 30 Juz & Qira'at",
+    keterangan: "Hafizh Al-Qur'an 30 Juz bersanad muttashil. Membimbing langsung santri dalam program tahfidz intensif dan mutqin.",
+    is_pimpinan: false,
+    urutan: 3,
+  },
+  {
+    id: 4,
+    nama: "Maryam Nur Fadhilah",
+    jabatan: "Pengasuh Asrama Putri & Bahasa",
+    gelar_depan: "Usth.",
+    gelar_belakang: "S.Pd.I",
+    bidang_studi: "Bahasa Arab & Akhlaq",
+    keterangan: "Alumnus PBA UIN, berfokus pada pembinaan karakter islami, adab harian santriwati, dan pembiasaan bi'ah lughawiyyah.",
+    is_pimpinan: false,
+    urutan: 4,
+  },
+  {
+    id: 5,
+    nama: "Fathurrahman",
+    jabatan: "Koordinator Sains & IT Santri",
+    gelar_depan: "Ust.",
+    gelar_belakang: "S.Si",
+    bidang_studi: "Matematika & Literasi Digital",
+    keterangan: "Pembimbing olimpiade sains santri dan inisiator program literasi teknologi cerdas untuk santri modern.",
+    is_pimpinan: false,
+    urutan: 5,
+  },
+  {
+    id: 6,
+    nama: "Syihabuddin",
+    jabatan: "Pengajar Fiqih & Ibadah Praktis",
+    gelar_depan: "Ust.",
+    gelar_belakang: "S.H.I",
+    bidang_studi: "Fiqih Madzhab Syafi'i",
+    keterangan: "Mengampu kajian kitab fiqih dasar hingga menengah serta membimbing praktek ibadah harian santri secara mendalam.",
+    is_pimpinan: false,
+    urutan: 6,
+  },
+];
+
 function PengajarCard({ p, accent, primary, onClick }: {
   p: Pengajar;
   accent: string;
@@ -28,6 +134,7 @@ function PengajarCard({ p, accent, primary, onClick }: {
 }) {
   const fotoUrl = p.foto_url ? toDirectImageUrl(p.foto_url) : null;
   const initials = p.nama.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+  const namaFormatted = formatNamaGelar(p);
 
   return (
     <button
@@ -72,7 +179,7 @@ function PengajarCard({ p, accent, primary, onClick }: {
               </span>
             )}
             <h3 className="font-extrabold text-sm text-gray-900 leading-tight line-clamp-2">
-              {p.gelar ? `${p.gelar} ${p.nama}` : p.nama}
+              {namaFormatted}
             </h3>
             <p className="text-xs font-semibold mt-0.5 line-clamp-1" style={{ color: primary }}>
               {p.jabatan}
@@ -105,6 +212,7 @@ function PengajarModal({ p, accent, primary, onClose }: {
 }) {
   const fotoUrl = p.foto_url ? toDirectImageUrl(p.foto_url) : null;
   const initials = p.nama.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+  const namaFormatted = formatNamaGelar(p);
 
   return (
     <div
@@ -154,7 +262,7 @@ function PengajarModal({ p, accent, primary, onClose }: {
             </span>
           )}
           <h2 className="text-lg font-extrabold text-gray-900 leading-tight">
-            {p.gelar ? `${p.gelar} ${p.nama}` : p.nama}
+            {namaFormatted}
           </h2>
           <p className="text-sm font-bold mt-0.5" style={{ color: primary }}>{p.jabatan}</p>
 
@@ -186,70 +294,6 @@ function PengajarModal({ p, accent, primary, onClose }: {
     </div>
   );
 }
-
-
-const DEFAULT_PENGAJAR: Pengajar[] = [
-  {
-    id: 1,
-    nama: "KH. Ahmad Dahlan Maksum, M.Ag",
-    jabatan: "Pengasuh & Pimpinan Pondok Pesantren",
-    gelar: "K.H.",
-    bidang_studi: "Tafsir & Ulumul Qur'an",
-    keterangan: "Pengasuh pondok dengan pengalaman lebih dari 25 tahun membina santri, mendalami keilmuan Islam klasik di pesantren salaf dan menyelesaikan pascasarjana di UIN.",
-    is_pimpinan: true,
-    urutan: 1,
-  },
-  {
-    id: 2,
-    nama: "Dr. H. Muhammad Fauzan, Lc., M.A.",
-    jabatan: "Direktur Pendidikan & Kurikulum",
-    gelar: "Dr.",
-    bidang_studi: "Bahasa Arab & Hadits",
-    keterangan: "Lulusan Universitas Al-Azhar Kairo, Mesir. Berdedikasi mengintegrasikan kurikulum agama dan kurikulum formal modern.",
-    is_pimpinan: true,
-    urutan: 2,
-  },
-  {
-    id: 3,
-    nama: "Ust. Ridhwan Al-Hafizh",
-    jabatan: "Kepala Halaqah Tahfidz Al-Qur'an",
-    gelar: "Ust.",
-    bidang_studi: "Tahfidz 30 Juz & Qira'at",
-    keterangan: "Hafizh Al-Qur'an 30 Juz bersanad muttashil. Membimbing langsung santri dalam program tahfidz intensif dan mutqin.",
-    is_pimpinan: false,
-    urutan: 3,
-  },
-  {
-    id: 4,
-    nama: "Usth. Maryam Nur Fadhilah, S.Pd.I",
-    jabatan: "Pengasuh Asrama Putri & Bahasa",
-    gelar: "Usth.",
-    bidang_studi: "Bahasa Arab & Akhlaq",
-    keterangan: "Alumnus PBA UIN, berfokus pada pembinaan karakter islami, adab harian santriwati, dan pembiasaan bi'ah lughawiyyah.",
-    is_pimpinan: false,
-    urutan: 4,
-  },
-  {
-    id: 5,
-    nama: "Ust. Fathurrahman, S.Si",
-    jabatan: "Koordinator Sains & IT Santri",
-    gelar: "Ust.",
-    bidang_studi: "Matematika & Literasi Digital",
-    keterangan: "Pembimbing olimpiade sains santri dan inisiator program literasi teknologi cerdas untuk santri modern.",
-    is_pimpinan: false,
-    urutan: 5,
-  },
-  {
-    id: 6,
-    nama: "Ust. Syihabuddin, S.H.I",
-    jabatan: "Pengajar Fiqih & Ibadah Praktis",
-    gelar: "Ust.",
-    bidang_studi: "Fiqih Madzhab Syafi'i",
-    keterangan: "Mengampu kajian kitab fiqih dasar hingga menengah serta membimbing praktek ibadah harian santri secara mendalam.",
-    is_pimpinan: false,
-    urutan: 6,
-  },
-];
 
 export default function PengajarSection({ pengajar, config }: PengajarSectionProps) {
   const [selected, setSelected] = useState<Pengajar | null>(null);

@@ -58,21 +58,55 @@ interface GaleriItem {
   urutan: number;
 }
 
+const THEME_PRESETS = [
+  { name: "Pesantren Emerald (Klasik)", primer: "#0f4c1e", aksen: "#c8a84b", desc: "Hijau Islami & Emas" },
+  { name: "Bahari Nusantara", primer: "#1e3a8a", aksen: "#eab308", desc: "Biru Navy & Emas Cerah" },
+  { name: "Kubah Nabawi (Teal)", primer: "#0f766e", aksen: "#d97706", desc: "Toska & Kuning Amber" },
+  { name: "Marun Andalusia", primer: "#831843", aksen: "#d4a373", desc: "Merah Marun & Rose Gold" },
+  { name: "Hutan Rabbani", primer: "#14532d", aksen: "#f59e0b", desc: "Forest Green & Amber" },
+  { name: "Royal Kesultanan", primer: "#1d4ed8", aksen: "#c8a84b", desc: "Biru Safir & Emas" },
+  { name: "Pesantren Salaf (Moka)", primer: "#5c3d2e", aksen: "#c8a84b", desc: "Coklat Kayu & Emas" },
+  { name: "Zaitun Earthy", primer: "#2d503d", aksen: "#ea580c", desc: "Sage Green & Terracotta" },
+  { name: "Kasturi Royal", primer: "#581c87", aksen: "#eab308", desc: "Ungu Elegan & Emas" },
+  { name: "Modern Charcoal", primer: "#334155", aksen: "#0d9488", desc: "Abu Slate & Cyan Teal" },
+  { name: "Midnight Onyx", primer: "#18181b", aksen: "#eab308", desc: "Hitam Pekat & Gold" },
+  { name: "Crimson Al-Aqsa", primer: "#991b1b", aksen: "#fbbf24", desc: "Merah Crimson & Emas" },
+];
+
 const COLOR_PRESETS_PRIMARY = [
   { name: "Hijau Emerald", hex: "#0f4c1e" },
-  { name: "Biru Navy", hex: "#1e3a8a" },
   { name: "Hijau Forest", hex: "#14532d" },
+  { name: "Hijau Sage/Olive", hex: "#2d503d" },
+  { name: "Hijau Daun Tua", hex: "#166534" },
+  { name: "Toska/Teal Nabawi", hex: "#0f766e" },
+  { name: "Biru Navy Klasik", hex: "#1e3a8a" },
+  { name: "Biru Safir/Royal", hex: "#1d4ed8" },
+  { name: "Biru Ocean Deep", hex: "#0369a1" },
+  { name: "Biru Denim", hex: "#2563eb" },
   { name: "Merah Marun", hex: "#831843" },
-  { name: "Coklat Klasik", hex: "#78350f" },
-  { name: "Hitam Elegan", hex: "#18181b" },
+  { name: "Merah Burgundy", hex: "#991b1b" },
+  { name: "Coklat Espresso", hex: "#78350f" },
+  { name: "Coklat Moka", hex: "#5c3d2e" },
+  { name: "Ungu Royal", hex: "#581c87" },
+  { name: "Abu Slate Charcoal", hex: "#334155" },
+  { name: "Hitam Onyx Elegan", hex: "#18181b" },
 ];
 
 const COLOR_PRESETS_ACCENT = [
   { name: "Emas Islami", hex: "#c8a84b" },
+  { name: "Emas Muda Cerah", hex: "#eab308" },
   { name: "Kuning Amber", hex: "#d97706" },
-  { name: "Emas Muda", hex: "#eab308" },
-  { name: "Cyan Teal", hex: "#0d9488" },
   { name: "Oranye Hangat", hex: "#ea580c" },
+  { name: "Terracotta Bata", hex: "#c2410c" },
+  { name: "Rose Gold", hex: "#d4a373" },
+  { name: "Cyan Teal", hex: "#0d9488" },
+  { name: "Hijau Mint Jade", hex: "#10b981" },
+  { name: "Biru Langit Sky", hex: "#0284c7" },
+  { name: "Ungu Lavender", hex: "#9333ea" },
+  { name: "Merah Coral", hex: "#f43f5e" },
+  { name: "Kuning Lemon", hex: "#facc15" },
+  { name: "Perak Platinum", hex: "#94a3b8" },
+  { name: "Krem Emas", hex: "#fde68a" },
 ];
 
 function AdminDashboardContent() {
@@ -842,6 +876,77 @@ function AdminDashboardContent() {
                     <div>
                       <h2 className="text-base font-bold text-gray-900">2. Tema Warna & Branding</h2>
                       <p className="text-xs text-gray-500">Sesuaikan palet warna agar identik dengan logo & seragam pesantren</p>
+                    </div>
+                  </div>
+
+                  {/* ── Paket Harmoni Tema Siap Pakai (1-Klik) ── */}
+                  <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100/70 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={16} className="text-amber-500" />
+                        <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                          ⚡ Rekomendasi Paket Tema Harmonis (1-Klik Primer & Aksen)
+                        </h3>
+                      </div>
+                      <span className="text-[11px] text-gray-400 hidden sm:inline">Klik tema untuk memasang warna serasi</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                      {THEME_PRESETS.map((t) => {
+                        const isSelected = (config.warna_primer === t.primer) && (config.warna_aksen === t.aksen);
+                        return (
+                          <button
+                            key={t.name}
+                            type="button"
+                            onClick={() => {
+                              handleConfigChange("warna_primer", t.primer);
+                              handleConfigChange("warna_aksen", t.aksen);
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition-all hover:scale-[1.02] flex flex-col justify-between ${
+                              isSelected
+                                ? "bg-white border-green-600 shadow-md ring-2 ring-green-600/30"
+                                : "bg-white/90 border-gray-200 hover:bg-white hover:border-gray-300 shadow-sm"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <span className="w-5 h-5 rounded-full shadow-sm border border-black/10 inline-block shrink-0" style={{ background: t.primer }} title="Primer" />
+                              <span className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/10 inline-block shrink-0" style={{ background: t.aksen }} title="Aksen" />
+                            </div>
+                            <span className="text-[11px] font-bold text-gray-900 leading-tight block truncate">{t.name}</span>
+                            <span className="text-[10px] text-gray-400 block mt-0.5 truncate">{t.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* ── Live Mini Preview Swatch ── */}
+                  <div
+                    className="mb-6 p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-sm"
+                    style={{ background: `linear-gradient(135deg, ${config.warna_primer || "#0f4c1e"}, #0a3315)`, color: "#ffffff" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-md shrink-0"
+                        style={{ background: config.warna_aksen || "#c8a84b", color: config.warna_primer || "#0f4c1e" }}
+                      >
+                        PSB
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider block" style={{ color: config.warna_aksen || "#c8a84b" }}>
+                          Live Preview Hasil Warna
+                        </span>
+                        <h4 className="text-sm font-extrabold text-white">
+                          {config.nama_pesantren || "Pesantren Anda"} — Tampilan Banner & Tombol
+                        </h4>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold shadow-sm" style={{ background: config.warna_aksen || "#c8a84b", color: config.warna_primer || "#0f4c1e" }}>
+                        Daftar Sekarang
+                      </span>
+                      <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/20 text-white border border-white/30">
+                        Gelombang Buka
+                      </span>
                     </div>
                   </div>
 
