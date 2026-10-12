@@ -143,6 +143,142 @@ function FileField({
   );
 }
 
+
+interface SuccessData {
+  nomor: string;
+  nama: string;
+  jenjang: string;
+  jalur: string;
+  noHpWali: string;
+  namaWali: string;
+  asalSekolah: string;
+}
+
+function SuccessView({
+  success,
+  config,
+  primary,
+  accent,
+}: {
+  success: SuccessData;
+  config: Record<string, string>;
+  primary: string;
+  accent: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const copyNomor = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(success.nomor);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const pesantren = config.nama_pesantren || "Pondok Pesantren";
+  const noWaAdmin = (config.no_wa_admin || "").replace(/[^0-9]/g, "");
+  const jalurLabel = success.jalur === "lksa" ? "Beasiswa LKSA (Gratis)" : "Reguler (MBS)";
+
+  const waMessage = encodeURIComponent(
+    `Assalamu'alaikum Admin PSB ${pesantren},\n\n` +
+    `Saya telah mendaftarkan calon santri baru secara online melalui website PSB dengan data berikut:\n\n` +
+    `📋 *No. Registrasi:* ${success.nomor}\n` +
+    `👤 *Nama Santri:* ${success.nama}\n` +
+    `🎓 *Jenjang Tujuan:* ${success.jenjang}\n` +
+    `🏷️ *Jalur Pendaftaran:* ${jalurLabel}\n` +
+    `🏫 *Asal Sekolah:* ${success.asalSekolah || "-"}\n` +
+    `👨‍👩‍👧 *Nama Wali:* ${success.namaWali}\n` +
+    `📱 *No. HP Wali:* ${success.noHpWali}\n\n` +
+    `Mohon konfirmasi penerimaan pendaftaran ini dan informasi jadwal seleksi berikutnya. Terima kasih.`
+  );
+
+  const waUrl = noWaAdmin
+    ? `https://wa.me/${noWaAdmin}?text=${waMessage}`
+    : `https://wa.me/?text=${waMessage}`;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ background: `linear-gradient(160deg, ${primary} 0%, #0a3315 100%)` }}>
+      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#dcfce7" }}>
+            <CheckCircle size={40} style={{ color: "#16a34a" }} />
+          </div>
+          <h2 className="text-2xl font-extrabold mb-1.5" style={{ color: primary }}>Pendaftaran Berhasil! 🎉</h2>
+          <p className="text-gray-500 text-sm">Data santri telah tersimpan di sistem kami.</p>
+        </div>
+
+        {/* Nomor Registrasi */}
+        <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: `${accent}12`, border: `2px solid ${accent}60` }}>
+          <p className="text-xs text-gray-500 font-medium mb-1">📋 Nomor Registrasi Anda</p>
+          <p className="text-2xl font-mono font-extrabold tracking-widest mb-2" style={{ color: primary }}>{success.nomor}</p>
+          <button
+            onClick={copyNomor}
+            type="button"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
+            style={{ background: copied ? "#dcfce7" : "#f3f4f6", color: copied ? "#16a34a" : "#6b7280" }}
+          >
+            <Copy size={12} />
+            {copied ? "Tersalin!" : "Salin Nomor"}
+          </button>
+        </div>
+
+        {/* Info Pendaftar Ringkas */}
+        <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3 mb-5 space-y-1.5 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-500">Nama Santri</span>
+            <span className="font-semibold text-gray-800">{success.nama}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Jenjang</span>
+            <span className="font-semibold text-gray-800">{success.jenjang}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-500">Jalur</span>
+            <span className="font-semibold text-gray-800">{success.jalur === "lksa" ? "Beasiswa LKSA (Gratis)" : "Reguler (MBS)"}</span>
+          </div>
+        </div>
+
+        {/* CTA WhatsApp - MAIN FEATURE */}
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "linear-gradient(135deg, #dcfce7, #f0fdf4)", border: "1.5px solid #86efac" }}>
+          <p className="text-sm font-bold text-green-900 mb-1 flex items-center gap-1.5">
+            <MessageCircle size={16} className="text-green-600" />
+            Langkah Berikutnya — Wajib!
+          </p>
+          <p className="text-xs text-green-800 mb-3 leading-relaxed">
+            Konfirmasikan pendaftaran Anda ke Admin PSB via WhatsApp agar berkas segera diverifikasi dan Anda mendapat informasi jadwal seleksi.
+          </p>
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center justify-center gap-2.5 py-3.5 px-5 rounded-xl font-bold text-white text-sm shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-white" viewBox="0 0 24 24">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.528 5.855L0 24l6.335-1.509A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.374l-.36-.213-3.756.894.937-3.648-.234-.376A9.818 9.818 0 1112 21.818z"/>
+            </svg>
+            Kirim Konfirmasi ke Admin PSB via WhatsApp
+          </a>
+          <p className="text-[11px] text-green-700 mt-2 text-center">Pesan sudah terisi otomatis dengan data Anda. Tinggal kirim!</p>
+        </div>
+
+        {/* Back Button */}
+        <Link
+          href="/"
+          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft size={15} /> Kembali ke Beranda
+        </Link>
+
+        <p className="text-center text-xs text-gray-400 mt-4 leading-relaxed">
+          Simpan nomor registrasi Anda. Panitia PSB akan menghubungi kembali untuk konfirmasi jadwal seleksi.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function DaftarForm() {
   const searchParams = useSearchParams();
   const gelombangId = searchParams.get("gelombang");
@@ -252,115 +388,7 @@ function DaftarForm() {
   };
 
   if (success) {
-    const pesantren = config.nama_pesantren || "Pondok Pesantren";
-    const noWaAdmin = (config.no_wa_admin || "").replace(/[^0-9]/g, "");
-    const jalurLabel = success.jalur === "lksa" ? "Beasiswa LKSA (Gratis)" : "Reguler (MBS)";
-
-    const waMessage = encodeURIComponent(
-      `Assalamu'alaikum Admin PSB ${pesantren},\n\n` +
-      `Saya telah mendaftarkan calon santri baru secara online melalui website PSB dengan data berikut:\n\n` +
-      `📋 *No. Registrasi:* ${success.nomor}\n` +
-      `👤 *Nama Santri:* ${success.nama}\n` +
-      `🎓 *Jenjang Tujuan:* ${success.jenjang}\n` +
-      `🏷️ *Jalur Pendaftaran:* ${jalurLabel}\n` +
-      `🏫 *Asal Sekolah:* ${success.asalSekolah}\n` +
-      `👨‍👩‍👧 *Nama Wali:* ${success.namaWali}\n` +
-      `📱 *No. HP Wali:* ${success.noHpWali}\n\n` +
-      `Mohon konfirmasi penerimaan pendaftaran ini dan informasi jadwal seleksi berikutnya. Terima kasih.`
-    );
-
-    const waUrl = noWaAdmin
-      ? `https://wa.me/${noWaAdmin}?text=${waMessage}`
-      : `https://wa.me/?text=${waMessage}`;
-
-    const [copied, setCopied] = useState(false);
-    const copyNomor = () => {
-      navigator.clipboard.writeText(success.nomor);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    };
-
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ background: `linear-gradient(160deg, ${primary} 0%, #0a3315 100%)` }}>
-        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#dcfce7" }}>
-              <CheckCircle size={40} style={{ color: "#16a34a" }} />
-            </div>
-            <h2 className="text-2xl font-extrabold mb-1.5" style={{ color: primary }}>Pendaftaran Berhasil! 🎉</h2>
-            <p className="text-gray-500 text-sm">Data santri telah tersimpan di sistem kami.</p>
-          </div>
-
-          {/* Nomor Registrasi */}
-          <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: `${accent}12`, border: `2px solid ${accent}60` }}>
-            <p className="text-xs text-gray-500 font-medium mb-1">📋 Nomor Registrasi Anda</p>
-            <p className="text-2xl font-mono font-extrabold tracking-widest mb-2" style={{ color: primary }}>{success.nomor}</p>
-            <button
-              onClick={copyNomor}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
-              style={{ background: copied ? "#dcfce7" : "#f3f4f6", color: copied ? "#16a34a" : "#6b7280" }}
-            >
-              <Copy size={12} />
-              {copied ? "Tersalin!" : "Salin Nomor"}
-            </button>
-          </div>
-
-          {/* Info Pendaftar Ringkas */}
-          <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3 mb-5 space-y-1.5 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Nama Santri</span>
-              <span className="font-semibold text-gray-800">{success.nama}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Jenjang</span>
-              <span className="font-semibold text-gray-800">{success.jenjang}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Jalur</span>
-              <span className="font-semibold text-gray-800">{success.jalur === "lksa" ? "Beasiswa LKSA" : "Reguler (MBS)"}</span>
-            </div>
-          </div>
-
-          {/* CTA WhatsApp - MAIN FEATURE */}
-          <div className="rounded-2xl p-4 mb-4" style={{ background: "linear-gradient(135deg, #dcfce7, #f0fdf4)", border: "1.5px solid #86efac" }}>
-            <p className="text-sm font-bold text-green-900 mb-1 flex items-center gap-1.5">
-              <MessageCircle size={16} className="text-green-600" />
-              Langkah Berikutnya — Wajib!
-            </p>
-            <p className="text-xs text-green-800 mb-3 leading-relaxed">
-              Konfirmasikan pendaftaran Anda ke Admin PSB via WhatsApp agar berkas segera diverifikasi dan Anda mendapat informasi jadwal seleksi.
-            </p>
-            <a
-              href={waUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-2.5 py-3.5 px-5 rounded-xl font-bold text-white text-sm shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform"
-              style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-white" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.528 5.855L0 24l6.335-1.509A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.374l-.36-.213-3.756.894.937-3.648-.234-.376A9.818 9.818 0 1112 21.818z"/>
-              </svg>
-              Kirim Konfirmasi ke Admin PSB via WhatsApp
-            </a>
-            <p className="text-[11px] text-green-700 mt-2 text-center">Pesan sudah terisi otomatis dengan data Anda. Tinggal kirim!</p>
-          </div>
-
-          {/* Back Button */}
-          <Link
-            href="/"
-            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <ArrowLeft size={15} /> Kembali ke Beranda
-          </Link>
-
-          <p className="text-center text-xs text-gray-400 mt-4 leading-relaxed">
-            Simpan nomor registrasi Anda. Panitia PSB akan menghubungi kembali untuk konfirmasi jadwal seleksi.
-          </p>
-        </div>
-      </div>
-    );
+    return <SuccessView success={success} config={config} primary={primary} accent={accent} />;
   }
 
   return (
