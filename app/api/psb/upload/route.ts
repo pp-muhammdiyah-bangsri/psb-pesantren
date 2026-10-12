@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // [T-1] Validasi MIME type di backend
+    // Validasi MIME type di backend
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json({
         ok: false,
@@ -38,26 +38,51 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // [T-1] Validasi ekstensi file
+    // Validasi ekstensi file
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
       return NextResponse.json({ ok: false, error: "Ekstensi file tidak valid." }, { status: 400 });
     }
 
     // Batasi folder yang diizinkan
-    const ALLOWED_FOLDERS = ["foto", "kk", "akta", "sktm", "ijazah", "misc"];
+    const ALLOWED_FOLDERS = ["pengajar", "foto", "kk", "akta", "sktm", "ijazah", "galeri", "logo", "misc"];
     const safeFolder = ALLOWED_FOLDERS.includes(folder) ? folder : "misc";
+
+    // File publik (pengajar, galeri, logo) diunggah ke bucket 'psb-galeri' yang bersifat public: true
+    const isPublicBucket = ["pengajar", "galeri", "logo"].includes(safeFolder);
+    const targetBucket = isPublicBucket ? "psb-galeri" : "psb-documents";
 
     const filename = `${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const bytes = await file.arrayBuffer();
 
     const admin = createAdminClient();
-    const { error } = await admin.storage
-      .from("psb-documents")
-      .upload(filename, Buffer.from(bytes), { contentType: file.type, upsert: false });
+
+    // Pastikan bucket ada
+    try {
+      await admin.storage.createBucket(targetBucket, { public: isPublicBucket });
+    } catch (_) {
+      // Abaikan jika bucket sudah ada
+    }
+
+    let { error } = await admin.storage
+      .from(targetBucket)
+      .upload(filename, Buffer.from(bytes), { contentType: file.type, upsert: true });
+
+    // Jika bucket target bermasalah, coba bucket fallback
+    let usedBucket = targetBucket;
+    if (error && targetBucket === "psb-galeri") {
+      const fallback = await admin.storage
+        .from("psb-documents")
+        .upload(filename, Buffer.from(bytes), { contentType: file.type, upsert: true });
+      if (!fallback.error) {
+        error = null;
+        usedBucket = "psb-documents";
+      }
+    }
+
     if (error) throw error;
 
-    const { data } = admin.storage.from("psb-documents").getPublicUrl(filename);
+    const { data } = admin.storage.from(usedBucket).getPublicUrl(filename);
     return NextResponse.json({ ok: true, url: data.publicUrl, filename });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Upload gagal.";

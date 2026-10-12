@@ -74,7 +74,7 @@ export default function AdminPengajar() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("folder", "foto");
+      formData.append("folder", "pengajar");
       const res = await fetch("/api/psb/upload", { method: "POST", body: formData });
       const d = await res.json();
       if (d.ok) setF("foto_url", d.url);
@@ -281,17 +281,66 @@ export default function AdminPengajar() {
               </div>
 
               {/* Foto Profil */}
-              <div className="sm:col-span-2 flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-700">Foto Profil (Maks. 1MB)</label>
-                <div className="flex items-center gap-3">
-                  {form.foto_url && <img src={form.foto_url} alt="Preview" className="w-12 h-12 rounded-lg object-cover border" />}
-                  <label className="flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium text-gray-600 cursor-pointer hover:bg-gray-50" style={{ borderColor: "#e5e7eb" }}>
-                    <Upload size={14} />
-                    {uploadingFoto ? "Mengupload..." : "Pilih Foto"}
-                    <input type="file" accept="image/*" className="hidden" onChange={handleFotoUpload} disabled={uploadingFoto} />
-                  </label>
-                  {form.foto_url && <button onClick={() => setF("foto_url", "")} className="text-red-400 hover:text-red-600 text-xs">Hapus</button>}
+              <div className="sm:col-span-3 bg-gray-50/80 p-4 rounded-2xl border border-gray-200">
+                <label className="text-xs font-bold text-gray-800 block mb-2">
+                  Foto Profil Pengajar (Pilih Salah Satu: Upload atau Tempel URL)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-600 block mb-1">
+                      Opsi 1: Upload File Gambar (JPG / PNG / WebP, Maks. 1MB)
+                    </label>
+                    <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-300 text-xs font-bold text-gray-700 cursor-pointer hover:bg-white hover:border-green-500 transition-colors">
+                      <Upload size={16} className="text-green-600" />
+                      {uploadingFoto ? "Sedang Mengupload ke Server..." : "Pilih File Foto dari HP / Komputer"}
+                      <input type="file" accept="image/*" className="hidden" onChange={handleFotoUpload} disabled={uploadingFoto} />
+                    </label>
+                    <span className="text-[10px] text-gray-400 block mt-1">
+                      Foto otomatis diunggah ke storage publik dan ditampilkan di landing page.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-gray-600 block mb-1">
+                      Opsi 2: Atau Tempel URL Foto / Link Google Drive
+                    </label>
+                    <input
+                      type="text"
+                      value={form.foto_url || ""}
+                      onChange={e => setF("foto_url", e.target.value)}
+                      placeholder="https://... atau link Google Drive foto"
+                      className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                      style={{ borderColor: "#e5e7eb" }}
+                    />
+                    {form.foto_url && (
+                      <button
+                        type="button"
+                        onClick={() => setF("foto_url", "")}
+                        className="text-red-500 hover:underline text-[11px] font-bold mt-1 inline-block"
+                      >
+                        ✕ Hapus Foto
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* Pratinjau Foto */}
+                {form.foto_url && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-3">
+                    <img
+                      src={form.foto_url}
+                      alt="Preview"
+                      className="w-14 h-16 rounded-xl object-cover object-top border-2 border-green-500 shadow-sm"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://placehold.co/150x200?text=Foto+Error";
+                      }}
+                    />
+                    <div className="text-xs">
+                      <span className="font-bold text-green-800 block">✓ Foto Terpasang</span>
+                      <span className="text-[11px] text-gray-400 break-all line-clamp-1">{form.foto_url}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Urutan */}

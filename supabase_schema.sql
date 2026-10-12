@@ -157,3 +157,19 @@ CREATE POLICY "public_read_pengajar" ON pengajar FOR SELECT USING (true);
 -- Migration kolom gelar_depan & gelar_belakang untuk fleksibilitas nama akademik
 ALTER TABLE pengajar ADD COLUMN IF NOT EXISTS gelar_depan TEXT;
 ALTER TABLE pengajar ADD COLUMN IF NOT EXISTS gelar_belakang TEXT;
+
+-- Pastikan bucket psb-galeri publik untuk foto profil pengajar dan galeri
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('psb-galeri', 'psb-galeri', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Pastikan policy read storage galeri aktif
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'public_read_galeri_storage'
+  ) THEN
+    CREATE POLICY "public_read_galeri_storage" ON storage.objects FOR SELECT
+      USING (bucket_id = 'psb-galeri');
+  END IF;
+END $$;
