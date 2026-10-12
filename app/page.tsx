@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import TentangSection from "@/components/TentangSection";
 import ProgramSection from "@/components/ProgramSection";
+import PengajarSection from "@/components/PengajarSection";
 import GelombangSection from "@/components/GelombangSection";
 import GaleriSection from "@/components/GaleriSection";
 import LokasiSection from "@/components/LokasiSection";
@@ -69,9 +70,24 @@ async function getGaleri() {
   }
 }
 
+
+async function getPengajar() {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("pengajar")
+      .select("*")
+      .eq("is_aktif", true)
+      .order("urutan");
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const [config, programs, gelombang, galeri] = await Promise.all([
-    getConfig(), getPrograms(), getGelombang(), getGaleri()
+  const [config, programs, gelombang, galeri, pengajar] = await Promise.all([
+    getConfig(), getPrograms(), getGelombang(), getGaleri(), getPengajar()
   ]);
 
   return (
@@ -80,6 +96,7 @@ export default async function HomePage() {
       <HeroSection config={config} gelombang={gelombang} />
       <TentangSection config={config} />
       <ProgramSection programs={programs} config={config} />
+      <PengajarSection pengajar={pengajar} config={config} />
       <GelombangSection gelombang={gelombang} config={config} />
       <GaleriSection galeri={galeri} config={config} />
       <LokasiSection config={config} />

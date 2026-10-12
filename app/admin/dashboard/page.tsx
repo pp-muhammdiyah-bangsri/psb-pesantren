@@ -8,7 +8,7 @@ import {
   Search, Filter, LogOut, Eye, X, ChevronDown,
   Palette, Calendar, Image as ImageIcon, ExternalLink,
   Save, Plus, Trash2, ToggleLeft, ToggleRight, Phone,
-  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Layers, FileText, FileCheck, AlertTriangle, CheckCircle2, HelpCircle
+  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Award, Layers, FileText, FileCheck, AlertTriangle, CheckCircle2, HelpCircle
 } from "lucide-react";
 import Link from "next/link";
 
@@ -405,6 +405,14 @@ function AdminDashboardContent() {
 
           <div className="flex items-center gap-3">
             <Link
+              href="/admin/pengajar"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+            >
+              <Award size={14} className="text-emerald-700" />
+              <span>Kelola Pengajar & Pimpinan</span>
+            </Link>
+
+            <Link
               href="/"
               target="_blank"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
@@ -499,6 +507,14 @@ function AdminDashboardContent() {
             <BookOpen size={17} />
             <span>Program Unggulan</span>
           </button>
+
+          <Link
+            href="/admin/pengajar"
+            className="flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 border-transparent text-gray-500 hover:text-emerald-800 hover:bg-emerald-50/50 transition-all shrink-0"
+          >
+            <Award size={17} />
+            <span>Pengajar & Pimpinan</span>
+          </Link>
         </div>
       </div>
 

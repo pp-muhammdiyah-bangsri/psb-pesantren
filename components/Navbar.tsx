@@ -50,6 +50,9 @@ export default function Navbar({ config }: NavbarProps) {
             <Link href="/#program" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
               Program Unggulan
             </Link>
+            <Link href="/#pengajar" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
+              Pengajar
+            </Link>
             <Link href="/#galeri" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
               Galeri
             </Link>
@@ -83,6 +86,9 @@ export default function Navbar({ config }: NavbarProps) {
           </Link>
           <Link href="/#program" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
             Program Unggulan
+          </Link>
+          <Link href="/#pengajar" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
+            Pengajar & Pimpinan
           </Link>
           <Link href="/#galeri" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
             Galeri

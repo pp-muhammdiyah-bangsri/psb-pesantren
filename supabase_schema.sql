@@ -135,3 +135,21 @@ ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS jenjang_tujuan TEXT DEFAULT 'SMP'
 ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS jalur_pendaftaran TEXT DEFAULT 'reguler';
 ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS akta_url TEXT;
 ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS sktm_url TEXT;
+
+-- 6. Pengajar dan Pimpinan Pondok Pesantren
+CREATE TABLE IF NOT EXISTS pengajar (
+  id SERIAL PRIMARY KEY,
+  nama TEXT NOT NULL,
+  jabatan TEXT NOT NULL,
+  gelar TEXT,
+  bidang_studi TEXT,
+  keterangan TEXT,
+  foto_url TEXT,
+  is_pimpinan BOOLEAN DEFAULT false,
+  is_aktif BOOLEAN DEFAULT true,
+  urutan INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE pengajar ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_read_pengajar" ON pengajar FOR SELECT USING (true);
