@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       jenis_kelamin,
       jenjang_tujuan = "SMP",
       jalur_pendaftaran = "reguler",
+      penghasilan_orang_tua,
       akta_url,
       sktm_url,
     } = body;
@@ -67,6 +68,7 @@ export async function POST(req: NextRequest) {
       nama_panggilan: body.nama_panggilan ? String(body.nama_panggilan).trim() : undefined,
       jenjang_tujuan: validJenjang,
       jalur_pendaftaran: validJalur,
+      penghasilan_orang_tua: penghasilan_orang_tua || null,
       akta_url: akta_url || null,
       sktm_url: sktm_url || null,
       ijazah_url: body.ijazah_url || akta_url || null, // Dukung kompatibilitas tabel lama
@@ -87,6 +89,7 @@ export async function POST(req: NextRequest) {
       const fallbackCatatan = [
         `[Jenjang: ${validJenjang}]`,
         `[Jalur: ${validJalur === "lksa" ? "Beasiswa LKSA (Gratis)" : "Reguler (MBS)"}]`,
+        penghasilan_orang_tua ? `[Gaji: ${penghasilan_orang_tua}]` : null,
         akta_url ? `[Akta: ${akta_url}]` : null,
         sktm_url ? `[SKTM: ${sktm_url}]` : null,
         body.catatan_admin || null,
@@ -97,6 +100,7 @@ export async function POST(req: NextRequest) {
       delete fallbackBody.jalur_pendaftaran;
       delete fallbackBody.akta_url;
       delete fallbackBody.sktm_url;
+      delete fallbackBody.penghasilan_orang_tua;
       fallbackBody.catatan_admin = fallbackCatatan;
 
       insertResult = await admin

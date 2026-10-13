@@ -47,6 +47,7 @@ const INITIAL: FormData = {
   alamat: "", rt_rw: "", kelurahan: "", kecamatan: "",
   kabupaten: "", provinsi: "", kode_pos: "",
   nama_ayah: "", pekerjaan_ayah: "", nama_ibu: "", pekerjaan_ibu: "",
+  penghasilan_orang_tua: "",
   no_hp_wali: "", email_wali: "",
   foto: null, kk: null, akta: null, sktm: null,
 };
@@ -611,6 +612,21 @@ function DaftarForm() {
                 <InputField label="Pekerjaan Ayah" value={String(form.pekerjaan_ayah)} onChange={e => set("pekerjaan_ayah", e.target.value)} />
                 <InputField label="Nama Ibu" value={String(form.nama_ibu)} onChange={e => set("nama_ibu", e.target.value)} />
                 <InputField label="Pekerjaan Ibu" value={String(form.pekerjaan_ibu)} onChange={e => set("pekerjaan_ibu", e.target.value)} />
+                <div className="sm:col-span-2">
+                  <SelectField
+                    label="Rata-rata Penghasilan / Gaji Orang Tua (Per Bulan)"
+                    value={String(form.penghasilan_orang_tua || "")}
+                    onChange={e => set("penghasilan_orang_tua", e.target.value)}
+                  >
+                    <option value="">-- Pilih Rentang Penghasilan --</option>
+                    <option value="< 1.000.000">&lt; Rp 1.000.000 (Kurang dari 1 Juta)</option>
+                    <option value="1.000.000 - 3.000.000">Rp 1.000.000 - Rp 3.000.000</option>
+                    <option value="3.000.000 - 5.000.000">Rp 3.000.000 - Rp 5.000.000</option>
+                    <option value="5.000.000 - 10.000.000">Rp 5.000.000 - Rp 10.000.000</option>
+                    <option value="> 10.000.000">&gt; Rp 10.000.000 (Lebih dari 10 Juta)</option>
+                    <option value="Tidak Berpenghasilan / Tidak Tetap">Tidak Berpenghasilan / Tidak Tetap</option>
+                  </SelectField>
+                </div>
                 <div className="sm:col-span-2">
                   <InputField label="No. WhatsApp / HP Orang Tua/Wali" required type="tel" value={String(form.no_hp_wali)} onChange={e => set("no_hp_wali", e.target.value)} placeholder="08xxxxxxxxxx" />
                   <p className="text-[11px] text-gray-500 mt-1">Nomor ini akan digunakan untuk mengirimkan informasi tes dan kelulusan.</p>

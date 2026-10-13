@@ -23,6 +23,7 @@ interface Pendaftar {
   no_hp_wali: string;
   nama_ayah?: string;
   nama_ibu?: string;
+  penghasilan_orang_tua?: string;
   alamat?: string;
   asal_sekolah: string;
   jurusan?: string;
@@ -248,6 +249,25 @@ function AdminDashboardContent() {
   };
 
   // Pendaftar Actions
+  const deletePendaftar = async (id: number, nama: string) => {
+    if (!confirm(`Apakah Anda yakin ingin MENGHAPUS / DROP data pendaftar "${nama}"?\n\nData ini akan dihapus secara permanen dari sistem.`)) return;
+    try {
+      const res = await fetch(`/api/admin/pendaftar?id=${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setPendaftarList(prev => prev.filter(p => p.id !== id));
+        if (selectedPendaftar?.id === id) setSelectedPendaftar(null);
+      } else {
+        alert(d.error || "Gagal menghapus data pendaftar.");
+      }
+    } catch {
+      alert("Terjadi kesalahan jaringan.");
+    }
+  };
+
   const updateStatus = async (id: number, status: string) => {
     if (!token) return;
     setUpdatingStatus(true);
@@ -265,13 +285,14 @@ function AdminDashboardContent() {
   };
 
   const exportCSV = () => {
-    const headers = ["No Registrasi", "Nama Lengkap", "JK", "Jalur Pendaftaran", "Jenjang Tujuan", "No HP Wali", "Asal Sekolah", "Peminatan", "Status", "Tanggal Daftar"];
+    const headers = ["No Registrasi", "Nama Lengkap", "JK", "Jalur Pendaftaran", "Jenjang Tujuan", "Penghasilan Ortu", "No HP Wali", "Asal Sekolah", "Peminatan", "Status", "Tanggal Daftar"];
     const rows = filteredPendaftar.map((d) => [
       d.nomor_registrasi || `PSB-${d.id}`,
       d.nama_lengkap,
       d.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki",
       (d.jalur_pendaftaran || (d.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")) === "lksa" ? "LKSA (Gratis)" : "Reguler (MBS)",
       d.jenjang_tujuan || (d.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP",
+      d.penghasilan_orang_tua || d.catatan_admin?.match(/\[Gaji:\s*([^\]]+)\]/i)?.[1] || "-",
       d.no_hp_wali,
       d.asal_sekolah,
       d.jurusan || "-",
@@ -722,17 +743,26 @@ function AdminDashboardContent() {
                               </span>
                             </td>
                             <td className="px-5 py-3.5 text-center">
-                              <button
-                                onClick={() => {
-                                  setSelectedPendaftar(p);
-                                  setCatatanVerifikasi(p.catatan_admin || "");
-                                }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shadow-sm"
-                                style={{ background: primaryColor }}
-                              >
-                                <Eye size={13} />
-                                <span>Verifikasi</span>
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setSelectedPendaftar(p);
+                                    setCatatanVerifikasi(p.catatan_admin || "");
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shadow-sm"
+                                  style={{ background: primaryColor }}
+                                >
+                                  <Eye size={13} />
+                                  <span>Verifikasi</span>
+                                </button>
+                                <button
+                                  onClick={() => deletePendaftar(p.id, p.nama_lengkap)}
+                                  className="p-1.5 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                                  title="Drop / Hapus Pendaftar Ini"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -2084,6 +2114,7 @@ function AdminDashboardContent() {
                 <div><strong>Asal Sekolah:</strong> {selectedPendaftar.asal_sekolah || "-"}</div>
                 <div><strong>Peminatan/Jurusan:</strong> {selectedPendaftar.jurusan || "Umum"}</div>
                 <div><strong>Orang Tua / Wali:</strong> {selectedPendaftar.nama_ayah || selectedPendaftar.nama_ibu || "-"}</div>
+                <div><strong>Rata-rata Gaji / Penghasilan Ortu:</strong> <span className="font-semibold text-emerald-800">{selectedPendaftar.penghasilan_orang_tua || selectedPendaftar.catatan_admin?.match(/\[Gaji:\s*([^\]]+)\]/i)?.[1] || "-"}</span></div>
                 <div><strong>WhatsApp:</strong> {selectedPendaftar.no_hp_wali || "-"}</div>
                 <div><strong>Alamat:</strong> {selectedPendaftar.alamat || "-"}</div>
               </div>
@@ -2161,14 +2192,24 @@ function AdminDashboardContent() {
                 />
               </div>
 
-              <div className="pt-3 border-t flex items-center justify-end gap-2">
+              <div className="pt-3 border-t flex items-center justify-between gap-2">
                 <button
                   type="button"
-                  onClick={() => setSelectedPendaftar(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200"
+                  onClick={() => deletePendaftar(selectedPendaftar.id, selectedPendaftar.nama_lengkap)}
+                  className="px-3 py-2 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 flex items-center gap-1.5 transition-colors"
+                  title="Hapus data calon santri ini secara permanen"
                 >
-                  Tutup
+                  <Trash2 size={14} />
+                  <span>Hapus / Drop Data</span>
                 </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPendaftar(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200"
+                  >
+                    Tutup
+                  </button>
                 <button
                   type="button"
                   disabled={updatingStatus}
@@ -2186,6 +2227,7 @@ function AdminDashboardContent() {
                 >
                   ✓ Terima Santri Ini
                 </button>
+                </div>
               </div>
             </div>
           </div>

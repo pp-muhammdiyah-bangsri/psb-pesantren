@@ -173,3 +173,6 @@ BEGIN
       USING (bucket_id = 'psb-galeri');
   END IF;
 END $$;
+
+-- Migration kolom penghasilan_orang_tua
+ALTER TABLE pendaftar ADD COLUMN IF NOT EXISTS penghasilan_orang_tua TEXT;
