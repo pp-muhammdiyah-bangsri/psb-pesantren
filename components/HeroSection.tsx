@@ -126,29 +126,9 @@ export default function HeroSection({ config, gelombang }: HeroProps) {
         </h1>
 
         {/* Tagline */}
-        <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-6 leading-relaxed">
+        <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed">
           {tagline}
         </p>
-
-        {/* Program Pendidikan Badges */}
-        {programTags.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-8 max-w-2xl mx-auto">
-            {programTags.map((tag, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold backdrop-blur-md transition-all hover:scale-105"
-                style={{
-                  background: "rgba(255, 255, 255, 0.12)",
-                  border: `1px solid ${accent}60`,
-                  color: "#ffffff",
-                }}
-              >
-                <span style={{ color: accent }}>✦</span>
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* CTA Buttons */}
         <div className="flex flex-wrap gap-4 justify-center items-center mb-14">
