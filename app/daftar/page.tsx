@@ -613,19 +613,13 @@ function DaftarForm() {
                 <InputField label="Nama Ibu" value={String(form.nama_ibu)} onChange={e => set("nama_ibu", e.target.value)} />
                 <InputField label="Pekerjaan Ibu" value={String(form.pekerjaan_ibu)} onChange={e => set("pekerjaan_ibu", e.target.value)} />
                 <div className="sm:col-span-2">
-                  <SelectField
-                    label="Rata-rata Penghasilan / Gaji Orang Tua (Per Bulan)"
+                  <InputField
+                    label="Rata-rata Gaji / Penghasilan Orang Tua (Per Bulan)"
                     value={String(form.penghasilan_orang_tua || "")}
                     onChange={e => set("penghasilan_orang_tua", e.target.value)}
-                  >
-                    <option value="">-- Pilih Rentang Penghasilan --</option>
-                    <option value="< 1.000.000">&lt; Rp 1.000.000 (Kurang dari 1 Juta)</option>
-                    <option value="1.000.000 - 3.000.000">Rp 1.000.000 - Rp 3.000.000</option>
-                    <option value="3.000.000 - 5.000.000">Rp 3.000.000 - Rp 5.000.000</option>
-                    <option value="5.000.000 - 10.000.000">Rp 5.000.000 - Rp 10.000.000</option>
-                    <option value="> 10.000.000">&gt; Rp 10.000.000 (Lebih dari 10 Juta)</option>
-                    <option value="Tidak Berpenghasilan / Tidak Tetap">Tidak Berpenghasilan / Tidak Tetap</option>
-                  </SelectField>
+                    placeholder="Contoh: Rp 2.500.000 atau 3.000.000"
+                  />
+                  <p className="text-[11px] text-gray-500 mt-1">Ketik rata-rata gaji atau penghasilan per bulan (bebas ketik angka / nominal).</p>
                 </div>
                 <div className="sm:col-span-2">
                   <InputField label="No. WhatsApp / HP Orang Tua/Wali" required type="tel" value={String(form.no_hp_wali)} onChange={e => set("no_hp_wali", e.target.value)} placeholder="08xxxxxxxxxx" />
