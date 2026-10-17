@@ -411,7 +411,7 @@ export default function AdminPengajar() {
                       <img
                         src={form.foto_url}
                         alt="Preview"
-                        className="w-14 h-18 rounded-xl object-cover object-top border-2 border-emerald-500 shadow-sm shrink-0"
+                        className="w-16 h-20 rounded-xl object-cover object-center border-2 border-emerald-500 shadow-sm shrink-0"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = "https://placehold.co/150x200?text=Foto+Error";
                         }}
@@ -497,7 +497,7 @@ export default function AdminPengajar() {
               return (
                 <div key={p.id} className="bg-white rounded-2xl shadow-sm border p-4 flex items-center gap-4" style={{ borderColor: "#f0f0f0" }}>
                   {p.foto_url ? (
-                    <img src={p.foto_url} alt={p.nama} className="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0" />
+                    <img src={p.foto_url} alt={p.nama} className="w-12 h-12 rounded-xl object-cover object-center border border-gray-200 shrink-0" />
                   ) : (
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}>
                       {p.nama.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}

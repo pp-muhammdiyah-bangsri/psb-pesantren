@@ -158,7 +158,7 @@ function PengajarCard({ p, accent, primary, onClick }: {
             src={rawUrl}
             alt={p.nama}
             onError={() => setImgError(true)}
-            className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div
@@ -294,7 +294,7 @@ function PengajarModal({ p, accent, primary, onClose }: {
               src={rawUrl}
               alt={p.nama}
               onError={() => setImgError(true)}
-              className="w-full h-full object-cover object-top"
+              className="w-full h-full object-cover object-center"
             />
           ) : (
             <div

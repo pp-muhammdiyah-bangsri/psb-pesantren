@@ -135,12 +135,25 @@ export default function PhotoCropModal({
   // Load natural image dimensions
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const img = e.currentTarget;
-    setImgNaturalSize({
-      width: img.naturalWidth || 800,
-      height: img.naturalHeight || 800,
-    });
-    setImgLoadError(null);
+    if (img.naturalWidth && img.naturalHeight) {
+      setImgNaturalSize({
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+      });
+      setImgLoadError(null);
+    }
   };
+
+  // Sync natural dimensions immediately if image was already cached
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setImgNaturalSize({
+        width: imgRef.current.naturalWidth,
+        height: imgRef.current.naturalHeight,
+      });
+      setImgLoadError(null);
+    }
+  }, [safeImageSrc]);
 
   const currentConfig = ASPECT_RATIO_CONFIGS[aspectRatio];
   const { width: viewW, height: viewH } = currentConfig;
@@ -309,17 +322,22 @@ export default function PhotoCropModal({
       const drawW = imgNaturalSize.width * scale * R;
       const drawH = imgNaturalSize.height * scale * R;
 
-      // Create an HTMLImageElement with crossOrigin set
-      const img = new Image();
-      img.crossOrigin = "anonymous";
+      // Gunakan image element yang sudah dimuat di DOM atau load baru sebagai cadangan
+      let imageToDraw: HTMLImageElement;
+      if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+        imageToDraw = imgRef.current;
+      } else {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error("Gagal memuat gambar untuk proses crop."));
+          img.src = safeImageSrc;
+        });
+        imageToDraw = img;
+      }
 
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("Gagal memuat gambar untuk proses crop."));
-        img.src = safeImageSrc;
-      });
-
-      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.drawImage(imageToDraw, -drawW / 2, -drawH / 2, drawW, drawH);
 
       // Convert canvas to Blob (JPEG 90%)
       const blob = await new Promise<Blob>((resolve, reject) => {
@@ -466,6 +484,8 @@ export default function PhotoCropModal({
                     position: "absolute",
                     left: "50%",
                     top: "50%",
+                    width: imgNaturalSize ? `${imgNaturalSize.width * scale}px` : "100%",
+                    height: imgNaturalSize ? `${imgNaturalSize.height * scale}px` : "100%",
                     transform: `translate(-50%, -50%) translate(${clampedPanX}px, ${clampedPanY}px) rotate(${rotation}deg) scaleX(${
                       isFlipped ? -1 : 1
                     })`,
@@ -482,11 +502,10 @@ export default function PhotoCropModal({
                     onError={() => setImgLoadError("Gagal memuat gambar. Silakan coba file lain.")}
                     draggable={false}
                     style={{
-                      width: imgNaturalSize ? `${imgNaturalSize.width * scale}px` : "auto",
-                      height: imgNaturalSize ? `${imgNaturalSize.height * scale}px` : "auto",
+                      width: "100%",
+                      height: "100%",
                       maxWidth: "none",
                       display: "block",
-                      transform: "translate(-50%, -50%)",
                       userSelect: "none",
                       pointerEvents: "none",
                     }}
@@ -663,7 +682,12 @@ export default function PhotoCropModal({
                         position: "absolute",
                         left: "50%",
                         top: "50%",
-                        // Scale factor from viewport to mini preview (mini width: 100% of card)
+                        width: imgNaturalSize
+                          ? `${(imgNaturalSize.width * scale * 140) / viewW}px`
+                          : "100%",
+                        height: imgNaturalSize
+                          ? `${(imgNaturalSize.height * scale * 135) / viewH}px`
+                          : "100%",
                         transform: `translate(-50%, -50%) translate(${
                           (clampedPanX / viewW) * 140
                         }px, ${(clampedPanY / viewH) * 135}px) rotate(${rotation}deg) scaleX(${
@@ -676,15 +700,10 @@ export default function PhotoCropModal({
                         src={safeImageSrc}
                         alt="Mini Preview"
                         style={{
-                          width: imgNaturalSize
-                            ? `${(imgNaturalSize.width * scale * 140) / viewW}px`
-                            : "auto",
-                          height: imgNaturalSize
-                            ? `${(imgNaturalSize.height * scale * 135) / viewH}px`
-                            : "auto",
+                          width: "100%",
+                          height: "100%",
                           maxWidth: "none",
                           display: "block",
-                          transform: "translate(-50%, -50%)",
                           pointerEvents: "none",
                         }}
                       />
@@ -719,6 +738,12 @@ export default function PhotoCropModal({
                         position: "absolute",
                         left: "50%",
                         top: "50%",
+                        width: imgNaturalSize
+                          ? `${(imgNaturalSize.width * scale * 80) / viewW}px`
+                          : "100%",
+                        height: imgNaturalSize
+                          ? `${(imgNaturalSize.height * scale * 80) / viewH}px`
+                          : "100%",
                         transform: `translate(-50%, -50%) translate(${
                           (clampedPanX / viewW) * 80
                         }px, ${(clampedPanY / viewH) * 80}px) rotate(${rotation}deg) scaleX(${
@@ -731,15 +756,10 @@ export default function PhotoCropModal({
                         src={safeImageSrc}
                         alt="Avatar Preview"
                         style={{
-                          width: imgNaturalSize
-                            ? `${(imgNaturalSize.width * scale * 80) / viewW}px`
-                            : "auto",
-                          height: imgNaturalSize
-                            ? `${(imgNaturalSize.height * scale * 80) / viewH}px`
-                            : "auto",
+                          width: "100%",
+                          height: "100%",
                           maxWidth: "none",
                           display: "block",
-                          transform: "translate(-50%, -50%)",
                           pointerEvents: "none",
                         }}
                       />
