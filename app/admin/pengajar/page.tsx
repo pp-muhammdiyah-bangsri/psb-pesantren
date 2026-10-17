@@ -2,10 +2,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Plus, Trash2, Save, User, Edit2, Award, ToggleLeft, ToggleRight, X, Upload, Sparkles
+  ArrowLeft, Plus, Trash2, Save, User, Edit2, Award, ToggleLeft, ToggleRight, X, Upload, Sparkles, Crop
 } from "lucide-react";
 import Link from "next/link";
 import { formatNamaGelar } from "@/components/PengajarSection";
+import PhotoCropModal from "@/components/PhotoCropModal";
 
 interface Pengajar {
   id?: number;
@@ -47,7 +48,11 @@ export default function AdminPengajar() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
-  const [uploadingFoto, setUploadingFoto] = useState(false);
+
+  // State untuk Crop Modal Ala Media Sosial
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string>("");
+  const [quickCropTeacher, setQuickCropTeacher] = useState<Pengajar | null>(null);
 
   useEffect(() => {
     if (!token) { router.push("/admin/login"); return; }
@@ -66,20 +71,75 @@ export default function AdminPengajar() {
 
   const setF = (key: string, val: string | boolean | number) => setForm(prev => ({ ...prev, [key]: val }));
 
-  const handleFotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handler memilih file untuk diedit di Crop Modal
+  const handleFileSelectForCrop = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1 * 1024 * 1024) { setMsg("Foto terlalu besar. Maksimal 1MB."); return; }
-    setUploadingFoto(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "pengajar");
-      const res = await fetch("/api/psb/upload", { method: "POST", body: formData });
-      const d = await res.json();
-      if (d.ok) setF("foto_url", d.url);
-      else setMsg(d.error || "Gagal upload foto");
-    } finally { setUploadingFoto(false); }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setQuickCropTeacher(null);
+        setCropImageSrc(reader.result);
+        setCropModalOpen(true);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  // Buka editor crop untuk foto yang sudah ada di form
+  const handleOpenCropForCurrent = () => {
+    if (!form.foto_url) return;
+    setQuickCropTeacher(null);
+    setCropImageSrc(form.foto_url);
+    setCropModalOpen(true);
+  };
+
+  // Quick crop langsung dari daftar pengajar
+  const handleQuickCropFromList = (p: Pengajar) => {
+    if (!p.foto_url) return;
+    setQuickCropTeacher(p);
+    setCropImageSrc(p.foto_url);
+    setCropModalOpen(true);
+  };
+
+  // Handler saat crop berhasil disimpan dan diunggah
+  const handleCropSaved = async (newUrl: string) => {
+    if (quickCropTeacher && quickCropTeacher.id) {
+      try {
+        const res = await fetch("/api/admin/pengajar", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ id: quickCropTeacher.id, foto_url: newUrl }),
+        });
+        const d = await res.json();
+        if (d.ok) {
+          setMsg(`Foto untuk ${quickCropTeacher.nama} berhasil diperbarui!`);
+          fetchData();
+        } else {
+          setMsg(d.error || "Gagal memperbarui foto pengajar.");
+        }
+      } catch (err) {
+        setMsg(err instanceof Error ? err.message : "Gagal memperbarui foto.");
+      } finally {
+        setQuickCropTeacher(null);
+      }
+    } else {
+      setF("foto_url", newUrl);
+      setMsg("Foto profil berhasil disesuaikan dan diunggah!");
+    }
+    setCropModalOpen(false);
+  };
+
+  // Ganti file gambar di dalam modal crop
+  const handleChangeImageInModal = (newFile: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setCropImageSrc(reader.result);
+      }
+    };
+    reader.readAsDataURL(newFile);
   };
 
   const save = async () => {
@@ -280,28 +340,39 @@ export default function AdminPengajar() {
                 />
               </div>
 
-              {/* Foto Profil */}
-              <div className="sm:col-span-3 bg-gray-50/80 p-4 rounded-2xl border border-gray-200">
-                <label className="text-xs font-bold text-gray-800 block mb-2">
-                  Foto Profil Pengajar (Pilih Salah Satu: Upload atau Tempel URL)
-                </label>
+              {/* Foto Profil dengan Mekanisme Editor Crop Ala Media Sosial */}
+              <div className="sm:col-span-3 bg-gradient-to-br from-emerald-50/70 via-gray-50 to-emerald-50/30 p-5 rounded-2xl border border-emerald-200 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <label className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-emerald-600" />
+                      Foto Profil Pengajar (Dilengkapi Editor Zoom, Geser & Crop)
+                    </label>
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      Unggah foto langsung dari HP/Laptop dan sesuaikan bingkainya layaknya media sosial (Instagram/WhatsApp).
+                    </p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
                   <div>
-                    <label className="text-[11px] font-semibold text-gray-600 block mb-1">
-                      Opsi 1: Upload File Gambar (JPG / PNG / WebP, Maks. 1MB)
+                    <label className="text-[11px] font-bold text-emerald-900 block mb-1.5">
+                      Opsi 1: Upload & Atur Foto (Rekomendasi)
                     </label>
-                    <label className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-gray-300 text-xs font-bold text-gray-700 cursor-pointer hover:bg-white hover:border-green-500 transition-colors">
-                      <Upload size={16} className="text-green-600" />
-                      {uploadingFoto ? "Sedang Mengupload ke Server..." : "Pilih File Foto dari HP / Komputer"}
-                      <input type="file" accept="image/*" className="hidden" onChange={handleFotoUpload} disabled={uploadingFoto} />
+                    <label className="flex flex-col items-center justify-center gap-1.5 px-4 py-3.5 rounded-2xl border-2 border-dashed border-emerald-300 bg-white/80 text-xs font-bold text-emerald-800 cursor-pointer hover:bg-emerald-50 hover:border-emerald-500 transition-all text-center group shadow-xs">
+                      <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 group-hover:scale-110 transition-transform">
+                        <Upload size={18} />
+                      </div>
+                      <span>Pilih Foto dari HP / Komputer</span>
+                      <span className="text-[10px] font-normal text-gray-500">
+                        Otomatis membuka editor: bisa zoom, geser, rotasi & crop
+                      </span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleFileSelectForCrop} />
                     </label>
-                    <span className="text-[10px] text-gray-400 block mt-1">
-                      Foto otomatis diunggah ke storage publik dan ditampilkan di landing page.
-                    </span>
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold text-gray-600 block mb-1">
+                    <label className="text-[11px] font-semibold text-gray-600 block mb-1.5">
                       Opsi 2: Atau Tempel URL Foto / Link Google Drive
                     </label>
                     <input
@@ -309,36 +380,63 @@ export default function AdminPengajar() {
                       value={form.foto_url || ""}
                       onChange={e => setF("foto_url", e.target.value)}
                       placeholder="https://... atau link Google Drive foto"
-                      className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                      className="w-full border rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
                       style={{ borderColor: "#e5e7eb" }}
                     />
                     {form.foto_url && (
-                      <button
-                        type="button"
-                        onClick={() => setF("foto_url", "")}
-                        className="text-red-500 hover:underline text-[11px] font-bold mt-1 inline-block"
-                      >
-                        ✕ Hapus Foto
-                      </button>
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={handleOpenCropForCurrent}
+                          className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors"
+                        >
+                          <Crop size={12} /> Buka di Editor Crop
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setF("foto_url", "")}
+                          className="text-red-500 hover:text-red-700 text-[11px] font-semibold hover:underline"
+                        >
+                          ✕ Hapus Foto
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Pratinjau Foto */}
+                {/* Pratinjau Foto Terpasang */}
                 {form.foto_url && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-3">
-                    <img
-                      src={form.foto_url}
-                      alt="Preview"
-                      className="w-14 h-16 rounded-xl object-cover object-top border-2 border-green-500 shadow-sm"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://placehold.co/150x200?text=Foto+Error";
-                      }}
-                    />
-                    <div className="text-xs">
-                      <span className="font-bold text-green-800 block">✓ Foto Terpasang</span>
-                      <span className="text-[11px] text-gray-400 break-all line-clamp-1">{form.foto_url}</span>
+                  <div className="mt-4 pt-4 border-t border-emerald-200/80 flex items-center justify-between flex-wrap gap-3 bg-white p-3.5 rounded-xl border border-gray-100 shadow-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={form.foto_url}
+                        alt="Preview"
+                        className="w-14 h-18 rounded-xl object-cover object-top border-2 border-emerald-500 shadow-sm shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "https://placehold.co/150x200?text=Foto+Error";
+                        }}
+                      />
+                      <div className="min-w-0">
+                        <span className="font-bold text-xs text-emerald-900 flex items-center gap-1">
+                          ✓ Foto Terpasang & Siap Tampil
+                        </span>
+                        <span className="text-[11px] text-gray-400 truncate block max-w-xs sm:max-w-md">
+                          {form.foto_url}
+                        </span>
+                        <span className="text-[10px] text-emerald-600 font-medium">
+                          Tampil rapi dan presisi di kartu landing page.
+                        </span>
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={handleOpenCropForCurrent}
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-xs shrink-0"
+                    >
+                      <Crop size={14} className="text-emerald-700" />
+                      Atur Ulang / Crop Foto Ini
+                    </button>
                   </div>
                 )}
               </div>
@@ -414,6 +512,15 @@ export default function AdminPengajar() {
                     <p className="text-xs text-gray-500 truncate">{p.jabatan}{p.bidang_studi ? ` · ${p.bidang_studi}` : ""}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {p.foto_url && (
+                      <button
+                        onClick={() => handleQuickCropFromList(p)}
+                        title="Atur Ulang / Crop Foto Pengajar Ini"
+                        className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors border border-emerald-200"
+                      >
+                        <Crop size={16} />
+                      </button>
+                    )}
                     <button onClick={() => toggleAktif(p)} title="Toggle tampil" className="text-gray-400 hover:text-green-600">
                       {p.is_aktif ? <ToggleRight size={22} className="text-green-500" /> : <ToggleLeft size={22} />}
                     </button>
@@ -426,6 +533,21 @@ export default function AdminPengajar() {
           </div>
         )}
       </div>
+
+      {/* Modal Editor Foto Gaya Media Sosial */}
+      <PhotoCropModal
+        isOpen={cropModalOpen}
+        onClose={() => {
+          setCropModalOpen(false);
+          setQuickCropTeacher(null);
+        }}
+        imageSrc={cropImageSrc}
+        namaPengajar={quickCropTeacher ? formatNamaGelar(quickCropTeacher) : formatNamaGelar(form)}
+        jabatanPengajar={quickCropTeacher ? quickCropTeacher.jabatan : form.jabatan}
+        isPimpinan={quickCropTeacher ? quickCropTeacher.is_pimpinan : form.is_pimpinan}
+        onSave={handleCropSaved}
+        onChangeImage={handleChangeImageInModal}
+      />
     </div>
   );
 }
