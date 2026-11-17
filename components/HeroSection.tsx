@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { Calendar, Users, BookOpen, Sparkles, Pause, Play } from "lucide-react";
+import { Calendar, Users, BookOpen, Sparkles } from "lucide-react";
 import { toDirectImageUrl, parseMediaUrl } from "@/lib/mediaUtils";
 import { buildPsbTheme } from "@/lib/themeUtils";
 
@@ -20,7 +20,6 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
   const [leftImgError, setLeftImgError] = useState(false);
   const [rightImgError, setRightImgError] = useState(false);
   const [frontSide, setFrontSide] = useState<"right" | "left">("right");
-  const [typingPaused, setTypingPaused] = useState(false);
   const typedTextRef = useRef<HTMLSpanElement>(null);
 
   const theme = buildPsbTheme(config);
@@ -29,18 +28,9 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
 
   useEffect(() => {
     const el = typedTextRef.current;
-    if (!el) return;
+    if (!el || tagline.length === 0) return;
 
-    const reducedMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (reducedMotion || typingPaused || tagline.length === 0) {
-      el.textContent = tagline;
-      return;
-    }
-
-    const typeMsPerChar = 90;
+    const typeMsPerChar = 88;
     const holdFullMs = 2500;
     const eraseMsPerChar = 38;
     const holdEmptyMs = 450;
@@ -79,7 +69,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
 
     rafId = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(rafId);
-  }, [tagline, typingPaused]);
+  }, [tagline]);
   const videoMedia = config.video_profil_url ? parseMediaUrl(config.video_profil_url) : null;
 
   // Resolve 2 foto berbeda untuk kartu kiri & kartu kanan berbentuk V
@@ -163,10 +153,10 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
         style={{ background: `linear-gradient(90deg, transparent, ${theme.accent}, transparent)` }}
       />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-24 sm:pt-5 sm:pb-24 lg:py-8 xl:py-10 flex-1 flex flex-col justify-between lg:flex-none">
-        <div className="flex-1 flex flex-col justify-between gap-2.5 lg:grid lg:grid-cols-12 lg:gap-x-10 lg:gap-y-7 lg:content-center lg:items-center">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 pb-[86px] sm:pt-5 sm:pb-24 lg:py-8 xl:py-10 flex-1 flex flex-col justify-between lg:flex-none">
+        <div className="flex-1 flex flex-col justify-between gap-2 lg:grid lg:grid-cols-12 lg:gap-x-10 lg:gap-y-7 lg:content-center lg:items-center">
           {/* 1. Status + Headline + Typewriter Tagline */}
-          <div className="lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:self-end flex flex-col items-center lg:items-start text-center lg:text-left space-y-2.5 sm:space-y-3.5">
+          <div className="lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:self-end flex flex-col items-center lg:items-start text-center lg:text-left space-y-2 sm:space-y-3">
             {activeGelombang ? (
               <div
                 className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold tracking-wide"
@@ -198,43 +188,26 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
             </h1>
 
             {/* Animasi Ketik 60 FPS Loop Halus Tanpa Re-render (CLS = 0) */}
-            <div className="flex items-start justify-center lg:justify-start gap-2.5 max-w-2xl">
-              <p className="relative text-sm sm:text-base lg:text-lg xl:text-xl font-medium text-white/95 leading-relaxed">
-                <span className="sr-only">{tagline}</span>
-                <span aria-hidden="true" className="invisible select-none">
-                  {tagline}
-                  <span className="inline-block w-[3px] ml-0.5" />
-                </span>
-                <span aria-hidden="true" className="absolute inset-0">
-                  <span ref={typedTextRef} />
-                  <span
-                    className={`inline-block w-[2px] h-[1.05em] align-[-0.14em] ml-0.5 rounded-full ${
-                      typingPaused ? "opacity-0" : "psb-jargon-caret"
-                    }`}
-                    style={{ backgroundColor: theme.accentLight }}
-                  />
-                </span>
-              </p>
-
-              <button
-                type="button"
-                onClick={() => setTypingPaused((p) => !p)}
-                aria-label={typingPaused ? "Putar animasi ketik jargon" : "Jeda animasi ketik jargon"}
-                className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full border border-white/15 bg-white/[0.06] text-white/60 hover:text-white hover:bg-white/15 transition-colors shrink-0 cursor-pointer"
-              >
-                {typingPaused ? (
-                  <Play size={10} className="fill-current translate-x-[0.5px]" aria-hidden="true" />
-                ) : (
-                  <Pause size={10} aria-hidden="true" />
-                )}
-              </button>
-            </div>
+            <p className="relative text-sm sm:text-base lg:text-lg xl:text-xl font-medium text-white/95 max-w-2xl leading-relaxed">
+              <span className="sr-only">{tagline}</span>
+              <span aria-hidden="true" className="invisible select-none">
+                {tagline}
+                <span className="inline-block w-[3px] ml-0.5" />
+              </span>
+              <span aria-hidden="true" className="absolute inset-0">
+                <span ref={typedTextRef} />
+                <span
+                  className="psb-jargon-caret inline-block w-[2px] h-[1.05em] align-[-0.14em] ml-0.5 rounded-full"
+                  style={{ backgroundColor: theme.accentLight }}
+                />
+              </span>
+            </p>
           </div>
 
           {/* 2. Dua Kartu Foto Berbentuk Huruf V (Seperti Kartu Poker Dipegang Tangan) */}
           <div className="lg:col-span-6 lg:row-span-2 lg:col-start-7 lg:row-start-1 lg:self-center xl:pr-4 flex justify-center items-center my-auto lg:my-0">
             <div
-              className="relative w-[350px] sm:w-[420px] lg:w-[465px] xl:w-[530px] h-[300px] sm:h-[345px] lg:h-[385px] xl:h-[435px]"
+              className="relative w-[350px] sm:w-[420px] lg:w-[465px] xl:w-[530px] h-[324px] sm:h-[365px] lg:h-[395px] xl:h-[445px]"
               aria-label={`Galeri foto utama ${nama}`}
             >
               {/* Kartu Kiri (Miring ke kiri membentuk sisi kiri huruf V) */}
@@ -242,14 +215,14 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                 type="button"
                 onClick={() => setFrontSide("left")}
                 aria-label="Tampilkan kartu foto pertama ke depan"
-                className={`group absolute left-1/2 bottom-2 w-[212px] sm:w-[244px] lg:w-[258px] xl:w-[285px] aspect-[3/4] lg:aspect-[3/3.65] xl:aspect-[3/3.7] origin-bottom rounded-2xl p-1.5 sm:p-2 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[61%] -rotate-[8deg] lg:-translate-x-[63%] lg:-rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
+                className={`group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[260px] xl:w-[288px] aspect-[3/4.25] lg:aspect-[3/3.7] xl:aspect-[3/3.75] origin-bottom rounded-2xl p-[3px] sm:p-1 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[61%] -rotate-[8deg] lg:-translate-x-[63%] lg:-rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
                   !isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
                 }`}
                 style={{
                   borderColor: !isRightFront ? theme.accent : "rgba(255,255,255,0.75)",
                 }}
               >
-                <div className="relative w-full h-full rounded-xl overflow-hidden bg-stone-900">
+                <div className="relative w-full h-full rounded-[13px] overflow-hidden bg-stone-900">
                   {leftCardPhoto ? (
                     <img
                       src={leftCardPhoto}
@@ -306,14 +279,14 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                 type="button"
                 onClick={() => setFrontSide("right")}
                 aria-label="Tampilkan kartu foto utama ke depan"
-                className={`group absolute left-1/2 bottom-2 w-[212px] sm:w-[244px] lg:w-[258px] xl:w-[285px] aspect-[3/4] lg:aspect-[3/3.65] xl:aspect-[3/3.7] origin-bottom rounded-2xl p-1.5 sm:p-2 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[39%] rotate-[8deg] lg:-translate-x-[37%] lg:rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
+                className={`group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[260px] xl:w-[288px] aspect-[3/4.25] lg:aspect-[3/3.7] xl:aspect-[3/3.75] origin-bottom rounded-2xl p-[3px] sm:p-1 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[39%] rotate-[8deg] lg:-translate-x-[37%] lg:rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
                   isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
                 }`}
                 style={{
                   borderColor: isRightFront ? theme.accent : "rgba(255,255,255,0.75)",
                 }}
               >
-                <div className="relative w-full h-full rounded-xl overflow-hidden bg-stone-900">
+                <div className="relative w-full h-full rounded-[13px] overflow-hidden bg-stone-900">
                   {rightCardPhoto ? (
                     <img
                       src={rightCardPhoto}

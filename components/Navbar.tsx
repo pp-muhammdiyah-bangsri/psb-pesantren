@@ -122,17 +122,6 @@ export default function Navbar({ config }: NavbarProps) {
                 {item.label}
               </Link>
             ))}
-            <div className="pt-2">
-              <Link
-                href="/daftar"
-                onClick={() => setOpen(false)}
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm"
-                style={{ backgroundColor: theme.accent, color: theme.onAccent }}
-              >
-                <span>Daftar Santri Baru</span>
-                <ArrowUpRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
           </div>
         )}
       </nav>

@@ -138,10 +138,10 @@
       opacity: 0;
     }
   }
+}
 
-  .psb-jargon-caret {
-    animation: heroCaretBlink 0.75s step-end infinite;
-  }
+.psb-jargon-caret {
+  animation: heroCaretBlink 0.9s step-end infinite;
 }
 
 @keyframes heroCaretBlink {
