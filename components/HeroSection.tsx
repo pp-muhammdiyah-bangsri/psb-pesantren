@@ -16,6 +16,22 @@ interface HeroProps {
   galeri?: HeroGaleriItem[];
 }
 
+function HeroCardCaption({ text }: { text: string }) {
+  return (
+    <>
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/75 via-black/30 to-transparent"
+      />
+      <div className="absolute bottom-2 left-2.5 right-2.5 flex justify-start">
+        <span className="inline-block max-w-full px-2.5 py-1 rounded-full bg-black/55 border border-white/20 text-[10px] sm:text-xs font-semibold leading-snug text-left text-white line-clamp-1">
+          {text}
+        </span>
+      </div>
+    </>
+  );
+}
+
 export default function HeroSection({ config, gelombang, galeri = [] }: HeroProps) {
   const [leftImgError, setLeftImgError] = useState(false);
   const [rightImgError, setRightImgError] = useState(false);
@@ -153,10 +169,10 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
         style={{ background: `linear-gradient(90deg, transparent, ${theme.accent}, transparent)` }}
       />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 pb-[86px] sm:pt-5 sm:pb-24 lg:py-8 xl:py-10 flex-1 flex flex-col justify-between lg:flex-none">
-        <div className="flex-1 flex flex-col justify-between gap-2 lg:grid lg:grid-cols-12 lg:gap-x-10 lg:gap-y-7 lg:content-center lg:items-center">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2.5 pb-[86px] sm:pt-5 sm:pb-24 lg:pt-4 lg:pb-10 xl:pt-5 xl:pb-12 flex-1 flex flex-col justify-between lg:flex-none">
+        <div className="flex-1 flex flex-col justify-between gap-2 lg:grid lg:grid-cols-12 lg:gap-x-10 lg:gap-y-11 xl:gap-y-14 lg:content-center lg:items-center">
           {/* 1. Status + Headline + Typewriter Tagline */}
-          <div className="lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:self-end flex flex-col items-center lg:items-start text-center lg:text-left space-y-2 sm:space-y-3">
+          <div className="lg:col-span-6 lg:col-start-1 lg:row-start-1 lg:self-end flex flex-col items-center lg:items-start text-center lg:text-left space-y-2 sm:space-y-3 lg:space-y-3.5">
             {activeGelombang ? (
               <div
                 className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold tracking-wide"
@@ -207,7 +223,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
           {/* 2. Dua Kartu Foto Berbentuk Huruf V (Seperti Kartu Poker Dipegang Tangan) */}
           <div className="lg:col-span-6 lg:row-span-2 lg:col-start-7 lg:row-start-1 lg:self-center xl:pr-4 flex justify-center items-center my-auto lg:my-0">
             <div
-              className="relative w-[350px] sm:w-[420px] lg:w-[465px] xl:w-[530px] h-[324px] sm:h-[365px] lg:h-[395px] xl:h-[445px]"
+              className="relative w-[350px] sm:w-[420px] lg:w-[490px] xl:w-[555px] h-[324px] sm:h-[365px] lg:h-[362px] xl:h-[404px]"
               aria-label={`Galeri foto utama ${nama}`}
             >
               {/* Kartu Kiri (Miring ke kiri membentuk sisi kiri huruf V) */}
@@ -215,7 +231,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                 type="button"
                 onClick={() => setFrontSide("left")}
                 aria-label="Tampilkan kartu foto pertama ke depan"
-                className={`group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[260px] xl:w-[288px] aspect-[3/4.25] lg:aspect-[3/3.7] xl:aspect-[3/3.75] origin-bottom rounded-2xl p-[3px] sm:p-1 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[61%] -rotate-[8deg] lg:-translate-x-[63%] lg:-rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
+                className={`group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[280px] xl:w-[310px] aspect-[3/4.25] lg:aspect-[3/3.72] xl:aspect-[3/3.78] origin-bottom rounded-2xl p-[3px] sm:p-1 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[61%] -rotate-[8deg] lg:-translate-x-[63%] lg:-rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
                   !isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
                 }`}
                 style={{
@@ -261,15 +277,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                     </div>
                   )}
                   {config.hero_foto_caption_2 && (
-                    <>
-                      <div
-                        aria-hidden="true"
-                        className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/60 to-transparent"
-                      />
-                      <span className="absolute bottom-2.5 left-3 right-3 text-[11px] font-semibold text-white/95 line-clamp-1">
-                        {config.hero_foto_caption_2}
-                      </span>
-                    </>
+                    <HeroCardCaption text={config.hero_foto_caption_2} />
                   )}
                 </div>
               </button>
@@ -279,7 +287,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                 type="button"
                 onClick={() => setFrontSide("right")}
                 aria-label="Tampilkan kartu foto utama ke depan"
-                className={`group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[260px] xl:w-[288px] aspect-[3/4.25] lg:aspect-[3/3.7] xl:aspect-[3/3.75] origin-bottom rounded-2xl p-[3px] sm:p-1 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[39%] rotate-[8deg] lg:-translate-x-[37%] lg:rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
+                className={`group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[280px] xl:w-[310px] aspect-[3/4.25] lg:aspect-[3/3.72] xl:aspect-[3/3.78] origin-bottom rounded-2xl p-[3px] sm:p-1 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[39%] rotate-[8deg] lg:-translate-x-[37%] lg:rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
                   isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
                 }`}
                 style={{
@@ -315,15 +323,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                       </div>
                     </div>
                   )}
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/75 via-black/30 to-transparent"
-                  />
-                  <div className="absolute bottom-2 left-2 right-2 flex justify-center sm:justify-start">
-                    <span className="inline-block max-w-full px-2.5 py-1 rounded-xl sm:rounded-full bg-black/55 border border-white/20 text-[10px] sm:text-xs font-semibold leading-snug text-center sm:text-left text-white line-clamp-2">
-                      {config.hero_foto_caption || "Suasana Pondok Pesantren"}
-                    </span>
-                  </div>
+                  <HeroCardCaption text={config.hero_foto_caption || "Suasana Pondok Pesantren"} />
                 </div>
               </button>
             </div>
