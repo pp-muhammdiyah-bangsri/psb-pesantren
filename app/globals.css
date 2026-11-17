@@ -1,13 +1,18 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), Georgia, serif;
+}
+
 @layer base {
   :root {
     --color-primary: #0f4c1e;
-    --color-primary-light: #1a6b2b;
-    --color-primary-dark: #083310;
+    --color-primary-dark: #072810;
     --color-accent: #c8a84b;
-    --color-accent-light: #d4b96a;
-    --color-accent-dark: #a8883a;
+    --color-accent-text: #856314;
+    --surface-ivory: #faf8f4;
+    --surface-stone: #f3efe6;
   }
 
   * {
@@ -15,76 +20,138 @@
   }
 
   html {
-    scroll-behavior: smooth;
+    background-color: var(--surface-ivory);
+    color: #161d18;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
   }
 
   body {
-    font-family: "Plus Jakarta Sans", "Inter", sans-serif;
-    background-color: #fafafa;
-    color: #1a1a1a;
+    font-family: var(--font-sans);
+    background-color: var(--surface-ivory);
+    color: #161d18;
+    overflow-x: clip;
+  }
+
+  :where(a:any-link, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid #0f4c1e;
+    outline-offset: 3px;
+  }
+
+  /* Native <dialog> top-layer modal & overscroll containment (di @layer base agar max-w-* utilities tetap menang) */
+  dialog.psb-dialog {
+    margin: auto;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1.5rem);
+    max-height: calc(100dvh - 1.5rem);
+    overflow: visible;
+  }
+
+  dialog.psb-dialog:modal {
+    overscroll-behavior: contain;
+  }
+
+  dialog.psb-dialog::backdrop {
+    background: rgba(8, 22, 12, 0.65);
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  dialog.psb-dialog.psb-dialog-dark::backdrop {
+    background: rgba(4, 12, 6, 0.9);
   }
 }
 
-@layer utilities {
-  .text-gradient-gold {
-    background: linear-gradient(135deg, #c8a84b, #f0d080, #c8a84b);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+/* Skip link aksesibel: tersembunyi sampai menerima fokus keyboard */
+.skip-link:where(:not(:focus-within, :active)) {
+  position: absolute;
+  clip-path: inset(50%);
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+}
+
+.skip-link:focus {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.625rem 1rem;
+  border-radius: 9999px;
+  background: #0f4c1e;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  dialog.psb-dialog {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+    transition:
+      opacity 0.2s ease-out,
+      transform 0.2s ease-out,
+      display 0.2s,
+      overlay 0.2s;
+    transition-behavior: allow-discrete;
   }
 
-  .bg-pattern-islamic {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c8a84b' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  dialog.psb-dialog[open] {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 
-  .card-glass {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(200, 168, 75, 0.2);
+  @starting-style {
+    dialog.psb-dialog[open] {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
   }
 
-  .btn-primary {
-    background: linear-gradient(135deg, #0f4c1e, #1a6b2b);
-    color: white;
-    padding: 0.75rem 2rem;
-    border-radius: 9999px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(15, 76, 30, 0.3);
+  dialog.psb-dialog::backdrop {
+    opacity: 0;
+    transition:
+      opacity 0.2s ease-out,
+      display 0.2s,
+      overlay 0.2s;
+    transition-behavior: allow-discrete;
   }
 
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(15, 76, 30, 0.4);
+  dialog.psb-dialog[open]::backdrop {
+    opacity: 1;
   }
 
-  .btn-accent {
-    background: linear-gradient(135deg, #c8a84b, #d4b96a);
-    color: #1a1a1a;
-    padding: 0.75rem 2rem;
-    border-radius: 9999px;
-    font-weight: 700;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(200, 168, 75, 0.3);
+  @starting-style {
+    dialog.psb-dialog[open]::backdrop {
+      opacity: 0;
+    }
   }
+}
 
-  .btn-accent:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(200, 168, 75, 0.5);
-  }
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
 
-  .section-title {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #0f4c1e;
-    text-align: center;
-  }
-
-  .divider-gold {
-    width: 60px;
-    height: 4px;
-    background: linear-gradient(90deg, #c8a84b, #f0d080);
-    border-radius: 2px;
-    margin: 1rem auto;
-  }
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
 }

@@ -1,237 +1,293 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
-import { Calendar, Users, BookOpen, ArrowRight, ChevronDown, Play, X } from "lucide-react";
+import { Calendar, Users, BookOpen, Sparkles } from "lucide-react";
 import { toDirectImageUrl, parseMediaUrl } from "@/lib/mediaUtils";
+import { buildPsbTheme } from "@/lib/themeUtils";
+
+interface HeroGaleriItem {
+  id: number;
+  judul?: string | null;
+  foto_url: string;
+}
 
 interface HeroProps {
   config: Record<string, string>;
   gelombang: Array<Record<string, unknown>>;
+  galeri?: HeroGaleriItem[];
 }
 
-const ARABIC_PATTERN = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cpath d='M60 10 L110 85 L10 85 Z' fill='none' stroke='%23c8a84b' stroke-width='0.5' opacity='0.15'/%3E%3Ccircle cx='60' cy='60' r='40' fill='none' stroke='%23c8a84b' stroke-width='0.5' opacity='0.1'/%3E%3C/svg%3E`;
+export default function HeroSection({ config, gelombang, galeri = [] }: HeroProps) {
+  const [leftImgError, setLeftImgError] = useState(false);
+  const [rightImgError, setRightImgError] = useState(false);
+  const [frontSide, setFrontSide] = useState<"right" | "left">("right");
 
-export default function HeroSection({ config, gelombang }: HeroProps) {
-  const [videoOpen, setVideoOpen] = useState(false);
-
-  const primary = config.warna_primer || "#0f4c1e";
-  const accent = config.warna_aksen || "#c8a84b";
-  const nama = config.nama_pesantren || "Pesantren Anda";
-  const tagline = config.tagline || "Mencetak Generasi Rabbani yang Unggul";
-
-  // Parse hero background image dari Google Drive atau direct URL
-  const heroBg = config.hero_bg_url ? toDirectImageUrl(config.hero_bg_url) : null;
-
-  // Parse video profil URL jika ada
+  const theme = buildPsbTheme(config);
+  const nama = config.nama_pesantren || "Pondok Pesantren";
+  const tagline = config.tagline || "Mencetak Generasi Rabbani yang Unggul dan Berakhlak Mulia";
   const videoMedia = config.video_profil_url ? parseMediaUrl(config.video_profil_url) : null;
 
-  // Parse program pendidikan menjadi tags/badges
+  // Resolve 2 foto berbeda untuk kartu kiri & kartu kanan berbentuk V
+  const galeriPhotos = galeri
+    .map((item) => ({
+      url: parseMediaUrl(item.foto_url).thumbnailUrl,
+      alt: item.judul || `Kegiatan ${nama}`,
+    }))
+    .filter((p) => Boolean(p.url));
+
+  const primaryUrl = config.hero_bg_url ? toDirectImageUrl(config.hero_bg_url) : "";
+  const secondaryConfigUrl = config.hero_bg_2_url ? toDirectImageUrl(config.hero_bg_2_url) : "";
+
+  const rightCardPhoto = !rightImgError
+    ? primaryUrl || galeriPhotos[0]?.url || videoMedia?.thumbnailUrl || null
+    : null;
+
+  const altFromGaleri = galeriPhotos.find((g) => g.url !== rightCardPhoto);
+  const leftCardPhoto = !leftImgError
+    ? (secondaryConfigUrl && secondaryConfigUrl !== rightCardPhoto ? secondaryConfigUrl : null) ||
+      altFromGaleri?.url ||
+      (videoMedia?.thumbnailUrl && videoMedia.thumbnailUrl !== rightCardPhoto
+        ? videoMedia.thumbnailUrl
+        : null)
+    : null;
+
   const programTags = config.program_pendidikan
     ? config.program_pendidikan.split(",").map((p) => p.trim()).filter(Boolean)
     : [];
 
   const today = new Date().toISOString().split("T")[0];
   const activeGelombang = gelombang.find(
-    (g: Record<string, unknown>) =>
+    (g) =>
       g.tanggal_buka &&
       g.tanggal_tutup &&
       String(g.tanggal_buka) <= today &&
       today <= String(g.tanggal_tutup)
   );
   const nextGelombang = !activeGelombang
-    ? gelombang.find(
-        (g: Record<string, unknown>) => g.tanggal_buka && String(g.tanggal_buka) > today
-      )
+    ? gelombang.find((g) => g.tanggal_buka && String(g.tanggal_buka) > today)
     : null;
+
+  const stats = [
+    { icon: Calendar, label: "Tahun Berdiri", value: config.tahun_berdiri || "1985" },
+    { icon: Users, label: "Santri Aktif", value: config.jumlah_santri || "1000+" },
+    {
+      icon: BookOpen,
+      label: "Program Studi",
+      value: programTags.length ? `${programTags.length} Fokus` : "Terpadu",
+    },
+  ];
+
+  const isRightFront = frontSide === "right";
 
   return (
     <section
-      className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-24 pb-16"
+      className="relative overflow-hidden text-white"
       style={{
-        background: `linear-gradient(160deg, ${primary} 0%, #0a3315 40%, #061f0d 100%)`,
+        background: `linear-gradient(155deg, ${theme.primaryDark} 0%, ${theme.primary} 55%, ${theme.primaryDark} 100%)`,
       }}
     >
-      {/* Hero Banner Background Image */}
-      {heroBg && (
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-all duration-700 pointer-events-none"
-          style={{
-            backgroundImage: `url("${heroBg}")`,
-          }}
-        />
-      )}
+      {/* Pola geometris SVG halus */}
+      <svg
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full opacity-[0.03] pointer-events-none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <pattern id="psb-lattice" width="80" height="80" patternUnits="userSpaceOnUse">
+            <path d="M40 0L80 40L40 80L0 40Z" fill="none" stroke="currentColor" strokeWidth="1" />
+            <circle cx="40" cy="40" r="14" fill="none" stroke="currentColor" strokeWidth="0.75" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#psb-lattice)" />
+      </svg>
 
-      {/* Dark overlay gradient agar teks kontras dan terbaca jelas */}
+      {/* Garis aksen tipis di atas */}
       <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: heroBg
-            ? `linear-gradient(180deg, ${primary}ea 0%, ${primary}db 45%, #061f0df0 100%)`
-            : `linear-gradient(160deg, ${primary} 0%, #0a3315 40%, #061f0d 100%)`,
-        }}
+        aria-hidden="true"
+        className="h-0.5 w-full"
+        style={{ background: `linear-gradient(90deg, transparent, ${theme.accent}, transparent)` }}
       />
 
-      {/* Islamic geometric background pattern */}
-      <div
-        className="absolute inset-0 opacity-10 pointer-events-none"
-        style={{
-          backgroundImage: `url("${ARABIC_PATTERN}")`,
-          backgroundSize: "120px 120px",
-        }}
-      />
-
-      {/* Radial glow */}
-      <div
-        className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-15 blur-3xl pointer-events-none"
-        style={{ background: accent }}
-      />
-
-      {/* Gold arc top border */}
-      <div
-        className="absolute top-0 left-0 right-0 h-1"
-        style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }}
-      />
-
-      <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-        {/* Badge Gelombang */}
-        {activeGelombang ? (
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold mb-6 animate-pulse"
-            style={{ background: `${accent}20`, border: `1px solid ${accent}60`, color: accent }}
-          >
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-ping" />
-            Pendaftaran Sedang Dibuka — {String(activeGelombang.nama)}
-          </div>
-        ) : nextGelombang ? (
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
-            style={{ background: `${accent}15`, border: `1px solid ${accent}40`, color: accent }}
-          >
-            <Calendar size={14} />
-            Gelombang Berikutnya: {String(nextGelombang.nama)}
-          </div>
-        ) : (
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold mb-6"
-            style={{ background: `${accent}15`, border: `1px solid ${accent}40`, color: accent }}
-          >
-            <BookOpen size={14} />
-            {config.hero_badge || "Penerimaan Santri Baru"}
-          </div>
-        )}
-
-        {/* Pesantren Name */}
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight mb-4 drop-shadow-md">
-          {nama}
-        </h1>
-
-        {/* Tagline */}
-        <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed">
-          {tagline}
-        </p>
-
-        {/* CTA Buttons */}
-        <div className="flex flex-wrap gap-4 justify-center items-center mb-14">
-          <Link
-            href="/daftar"
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold text-base transition-all hover:scale-105 hover:shadow-2xl"
-            style={{
-              background: `linear-gradient(135deg, ${accent}, #f0d080)`,
-              color: primary,
-              boxShadow: `0 6px 30px ${accent}50`,
-            }}
-          >
-            {config.hero_cta_daftar || "Daftar Sekarang"} <ArrowRight size={18} />
-          </Link>
-
-          {videoMedia && videoMedia.embedUrl ? (
-            <button
-              onClick={() => setVideoOpen(true)}
-              className="inline-flex items-center gap-2.5 px-7 py-4 rounded-full font-semibold text-base text-white transition-all hover:bg-white/15 hover:scale-105"
-              style={{
-                background: "rgba(255, 255, 255, 0.12)",
-                border: `1.5px solid ${accent}70`,
-              }}
-            >
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-x-10 lg:gap-y-5 items-start">
+          {/* 1. Status + Headline + Tagline */}
+          <div className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3 sm:space-y-4 lg:pt-4">
+            {activeGelombang ? (
               <div
-                className="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center text-white"
-                style={{ boxShadow: "0 0 12px rgba(239, 68, 68, 0.6)" }}
+                className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold tracking-wide"
+                style={{ color: theme.accentLight }}
               >
-                <Play size={12} className="fill-white translate-x-0.5" />
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" aria-hidden="true" />
+                <span>Pendaftaran Dibuka — {String(activeGelombang.nama)}</span>
               </div>
-              <span>{config.hero_cta_video || "Tonton Video Profil"}</span>
-            </button>
-          ) : (
-            <a
-              href="#gelombang"
-              className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-semibold text-base border-2 text-white transition-all hover:bg-white/10"
-              style={{ borderColor: `${accent}60` }}
-            >
-              {config.hero_cta_info || "Info Pendaftaran"}
-            </a>
-          )}
-        </div>
+            ) : nextGelombang ? (
+              <div
+                className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold tracking-wide"
+                style={{ color: theme.accentLight }}
+              >
+                <Calendar size={14} aria-hidden="true" />
+                <span>Gelombang Berikutnya: {String(nextGelombang.nama)}</span>
+              </div>
+            ) : (
+              <div
+                className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold tracking-wide"
+                style={{ color: theme.accentLight }}
+              >
+                <Sparkles size={14} aria-hidden="true" />
+                <span>{config.hero_badge || "Penerimaan Santri Baru"}</span>
+              </div>
+            )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4 max-w-lg mx-auto">
-          {[
-            { icon: Calendar, label: "Tahun Berdiri", value: config.tahun_berdiri || "1985" },
-            { icon: Users, label: "Santri Aktif", value: config.jumlah_santri || "1000+" },
-            {
-              icon: BookOpen,
-              label: "Program Pendidikan",
-              value: programTags.length ? `${programTags.length} Program` : "Unggulan",
-            },
-          ].map(({ icon: Icon, label, value }) => (
+            <h1 className="font-display text-[1.9rem] sm:text-5xl lg:text-[2.9rem] xl:text-[3.25rem] font-bold leading-[1.12] tracking-tight text-white">
+              {nama}
+            </h1>
+            <p className="text-sm sm:text-lg lg:text-xl text-white/85 max-w-2xl leading-relaxed">
+              {tagline}
+            </p>
+          </div>
+
+          {/* 2. Dua Kartu Foto Berbentuk Huruf V (Seperti Kartu Poker Dipegang Tangan) */}
+          <div className="lg:col-span-6 lg:row-span-2 lg:col-start-7 lg:row-start-1 lg:self-start lg:-mt-2 flex justify-center">
             <div
-              key={label}
-              className="flex flex-col items-center p-3 sm:p-4 rounded-xl backdrop-blur-sm"
-              style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${accent}30` }}
+              className="relative w-[305px] sm:w-[375px] lg:w-[490px] xl:w-[560px] h-[220px] sm:h-[275px] lg:h-[370px] xl:h-[420px]"
+              aria-label={`Galeri foto utama ${nama}`}
             >
-              <Icon size={20} style={{ color: accent }} className="mb-1" />
-              <span className="text-white font-bold text-base sm:text-lg leading-tight">{value}</span>
-              <span className="text-white/60 text-[11px] sm:text-xs mt-0.5">{label}</span>
+              {/* Kartu Kiri (Miring ke kiri membentuk sisi kiri huruf V) */}
+              <button
+                type="button"
+                onClick={() => setFrontSide("left")}
+                aria-label="Tampilkan kartu foto pertama ke depan"
+                className={`group absolute left-1/2 bottom-2 w-[166px] sm:w-[208px] lg:w-[270px] xl:w-[305px] aspect-[3/3.45] origin-bottom rounded-2xl p-1.5 sm:p-2 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[68%] -rotate-[10deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-rotate-[12deg] motion-safe:hover:-translate-y-1.5 ${
+                  !isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
+                }`}
+                style={{
+                  borderColor: !isRightFront ? theme.accent : "rgba(255,255,255,0.75)",
+                }}
+              >
+                <div className="relative w-full h-full rounded-xl overflow-hidden bg-stone-900">
+                  {leftCardPhoto ? (
+                    <img
+                      src={leftCardPhoto}
+                      alt={altFromGaleri?.alt || `Aktivitas santri ${nama}`}
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      onError={() => setLeftImgError(true)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full p-4 flex flex-col justify-between text-white"
+                      style={{
+                        background: `linear-gradient(155deg, ${theme.primaryDark}, ${theme.primary})`,
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-widest"
+                          style={{ color: theme.accentLight }}
+                        >
+                          PSB Online
+                        </span>
+                        <BookOpen size={15} style={{ color: theme.accentLight }} aria-hidden="true" />
+                      </div>
+                      <div>
+                        <p className="font-display text-base sm:text-lg font-bold leading-snug">
+                          Generasi Qur&apos;ani &amp; Berakhlak Mulia
+                        </p>
+                        {activeGelombang && (
+                          <p className="text-[11px] text-white/75 mt-1.5 tabular-nums">
+                            {String(activeGelombang.nama)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {config.hero_foto_caption_2 && (
+                    <>
+                      <div
+                        aria-hidden="true"
+                        className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/60 to-transparent"
+                      />
+                      <span className="absolute bottom-2.5 left-3 right-3 text-[11px] font-semibold text-white/95 line-clamp-1">
+                        {config.hero_foto_caption_2}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </button>
+
+              {/* Kartu Kanan (Miring ke kanan membentuk sisi kanan huruf V) */}
+              <button
+                type="button"
+                onClick={() => setFrontSide("right")}
+                aria-label="Tampilkan kartu foto utama ke depan"
+                className={`group absolute left-1/2 bottom-2 w-[166px] sm:w-[208px] lg:w-[270px] xl:w-[305px] aspect-[3/3.45] origin-bottom rounded-2xl p-1.5 sm:p-2 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[32%] rotate-[10deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:rotate-[12deg] motion-safe:hover:-translate-y-1.5 ${
+                  isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
+                }`}
+                style={{
+                  borderColor: isRightFront ? theme.accent : "rgba(255,255,255,0.75)",
+                }}
+              >
+                <div className="relative w-full h-full rounded-xl overflow-hidden bg-stone-900">
+                  {rightCardPhoto ? (
+                    <img
+                      src={rightCardPhoto}
+                      alt={`Suasana lingkungan ${nama}`}
+                      fetchPriority="high"
+                      decoding="sync"
+                      referrerPolicy="no-referrer"
+                      onError={() => setRightImgError(true)}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-full p-4 flex flex-col justify-between text-white"
+                      style={{
+                        background: `linear-gradient(155deg, ${theme.primary}, ${theme.primaryDark})`,
+                      }}
+                    >
+                      <Sparkles size={18} style={{ color: theme.accentLight }} aria-hidden="true" />
+                      <div>
+                        <p className="font-display text-base sm:text-lg font-bold leading-snug">
+                          {nama}
+                        </p>
+                        <p className="text-[11px] text-white/75 mt-1">
+                          Penerimaan Santri Baru
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/70 via-black/25 to-transparent"
+                  />
+                  <div className="absolute bottom-2.5 left-3 right-3">
+                    <span className="inline-block max-w-full truncate px-2.5 py-1 rounded-full bg-black/45 border border-white/20 text-[11px] sm:text-xs font-semibold text-white">
+                      {config.hero_foto_caption || "Suasana Pondok Pesantren"}
+                    </span>
+                  </div>
+                </div>
+              </button>
             </div>
-          ))}
+          </div>
+
+          {/* 3. Unified Glass Stats Strip */}
+          <div className="lg:col-span-6">
+            <div className="grid grid-cols-3 divide-x divide-white/15 rounded-xl bg-white/[0.06] border border-white/15 py-2 sm:py-2.5 max-w-[420px] mx-auto lg:mx-0">
+              {stats.map(({ icon: Icon, label, value }) => (
+                <div key={label} className="px-2.5 sm:px-4 text-center lg:text-left">
+                  <div className="flex items-center justify-center lg:justify-start gap-1.5 mb-0.5">
+                    <Icon size={12} style={{ color: theme.accentLight }} className="shrink-0" aria-hidden="true" />
+                    <span className="font-bold text-xs sm:text-sm text-white tabular-nums truncate">
+                      {value}
+                    </span>
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-white/75 leading-tight">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Video Modal Popup */}
-      {videoOpen && videoMedia && videoMedia.embedUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setVideoOpen(false)}
-        >
-          <div
-            className="relative max-w-4xl w-full aspect-video rounded-2xl overflow-hidden shadow-2xl bg-black border border-white/10"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setVideoOpen(false)}
-              className="absolute top-4 right-4 text-white/80 hover:text-white z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 transition-colors"
-              aria-label="Tutup Video"
-            >
-              <X size={24} />
-            </button>
-            <iframe
-              src={videoMedia.embedUrl}
-              title="Video Profil Pesantren"
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Scroll indicator */}
-      <a
-        href="#tentang"
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/40 hover:text-white/80 transition-colors animate-bounce"
-        aria-label="Scroll ke profil"
-      >
-        <ChevronDown size={28} />
-      </a>
     </section>
   );
 }

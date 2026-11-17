@@ -45,11 +45,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Batasi folder yang diizinkan
-    const ALLOWED_FOLDERS = ["pengajar", "foto", "kk", "akta", "sktm", "ijazah", "galeri", "logo", "misc"];
+    const ALLOWED_FOLDERS = ["pengajar", "foto", "kk", "akta", "sktm", "ijazah", "galeri", "logo", "hero", "misc"];
     const safeFolder = ALLOWED_FOLDERS.includes(folder) ? folder : "misc";
 
-    // File publik (pengajar, galeri, logo) diunggah ke bucket 'psb-galeri' yang bersifat public: true
-    const isPublicBucket = ["pengajar", "galeri", "logo"].includes(safeFolder);
+    // File publik (pengajar, galeri, logo, hero) diunggah ke bucket 'psb-galeri' yang bersifat public: true
+    const isPublicBucket = ["pengajar", "galeri", "logo", "hero"].includes(safeFolder);
     const targetBucket = isPublicBucket ? "psb-galeri" : "psb-documents";
 
     const filename = `${safeFolder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;

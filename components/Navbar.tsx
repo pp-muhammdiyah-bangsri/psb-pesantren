@@ -1,114 +1,130 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, BookOpen } from "lucide-react";
+import { Menu, X, BookOpen, ArrowUpRight } from "lucide-react";
 import { toDirectImageUrl } from "@/lib/mediaUtils";
+import { buildPsbTheme } from "@/lib/themeUtils";
 
 interface NavbarProps {
   config: Record<string, string>;
 }
 
+const NAV_LINKS = [
+  { href: "/#tentang", label: "Profil" },
+  { href: "/#program", label: "Program" },
+  { href: "/#pengajar", label: "Asatidz" },
+  { href: "/#gelombang", label: "Jadwal PSB" },
+  { href: "/#galeri", label: "Galeri" },
+  { href: "/#lokasi", label: "Lokasi" },
+];
+
 export default function Navbar({ config }: NavbarProps) {
   const [open, setOpen] = useState(false);
-  const nama = config.nama_pesantren || "Pesantren";
-  const namaSingkat = config.nama_singkat || "Ponpes";
-  const primary = config.warna_primer || "#0f4c1e";
-  const accent = config.warna_aksen || "#c8a84b";
+  const [logoError, setLogoError] = useState(false);
+  const theme = buildPsbTheme(config);
+  const namaSingkat = config.nama_singkat || config.nama_pesantren || "Pesantren";
+  const logoSrc = config.logo_url && !logoError ? toDirectImageUrl(config.logo_url) : null;
 
   return (
-    <nav
-      className="fixed top-0 left-0 right-0 z-50"
-      style={{ background: `${primary}f0`, backdropFilter: "blur(12px)", borderBottom: `1px solid ${accent}40` }}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo + Nama */}
-          <Link href="/" className="flex items-center gap-3 group">
-            {config.logo_url ? (
-              <img src={toDirectImageUrl(config.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="h-10 w-10 rounded-full object-cover bg-white/10" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
+    <header className="sticky top-0 z-40 border-b border-black/10" style={{ backgroundColor: theme.primaryDark }}>
+      <nav aria-label="Utama" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-[72px]">
+          <Link href="/" className="flex items-center gap-3 min-w-0 group">
+            {logoSrc ? (
+              <img
+                src={logoSrc}
+                alt={`Logo ${namaSingkat}`}
+                width={40}
+                height={40}
+                referrerPolicy="no-referrer"
+                onError={() => setLogoError(true)}
+                className="h-10 w-10 rounded-full object-cover bg-white/10 ring-1 ring-white/20 shrink-0"
+              />
             ) : (
               <div
-                className="h-10 w-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)` }}
+                className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 ring-1 ring-white/20"
+                style={{ backgroundColor: theme.accent, color: theme.onAccent }}
               >
-                <BookOpen size={20} style={{ color: primary }} />
+                <BookOpen size={18} aria-hidden="true" />
               </div>
             )}
-            <div className="hidden sm:block">
-              <p className="text-white font-bold text-sm leading-tight">{namaSingkat}</p>
-              <p className="text-xs leading-tight" style={{ color: accent }}>
-                {config.navbar_sub || "Pendaftaran Online"}
+            <div className="min-w-0">
+              <p className="text-white font-bold text-sm sm:text-base leading-tight truncate">
+                {namaSingkat}
+              </p>
+              <p className="text-xs leading-tight truncate" style={{ color: theme.accentLight }}>
+                {config.navbar_sub || "Penerimaan Santri Baru"}
               </p>
             </div>
           </Link>
 
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/#gelombang" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-              Gelombang PSB
-            </Link>
-            <Link href="/#program" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-              Program Unggulan
-            </Link>
-            <Link href="/#pengajar" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-              Pengajar
-            </Link>
-            <Link href="/#galeri" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-              Galeri
-            </Link>
-            <Link href="/#lokasi" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-              Lokasi
-            </Link>
-            <Link href="/#tentang" className="text-white/80 hover:text-white text-sm font-medium transition-colors">
-              Tentang Kami
-            </Link>
+          {/* Desktop Links */}
+          <div className="hidden lg:flex items-center gap-7">
+            <ul className="flex items-center gap-6">
+              {NAV_LINKS.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="text-sm font-medium text-white/85 hover:text-white transition-colors py-1"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
             <Link
               href="/daftar"
-              className="px-5 py-2 rounded-full font-semibold text-sm transition-all hover:opacity-90 hover:scale-105 shadow-md"
-              style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, color: primary }}
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full font-bold text-sm transition-transform duration-200 hover:-translate-y-0.5 shadow-sm"
+              style={{ backgroundColor: theme.accent, color: theme.onAccent }}
             >
-              Daftar Sekarang
+              <span>Daftar Sekarang</span>
+              <ArrowUpRight size={15} aria-hidden="true" />
             </Link>
           </div>
 
-          {/* Mobile toggle */}
-          <button onClick={() => setOpen(!open)} className="md:hidden text-white p-2">
-            {open ? <X size={22} /> : <Menu size={22} />}
+          {/* Mobile Menu Toggle */}
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            aria-label={open ? "Tutup menu navigasi" : "Buka menu navigasi"}
+            className="lg:hidden inline-flex items-center justify-center min-w-11 min-h-11 rounded-xl text-white hover:bg-white/10 transition-colors cursor-pointer"
+          >
+            {open ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
           </button>
         </div>
-      </div>
 
-      {/* Mobile Menu */}
-      {open && (
-        <div className="md:hidden px-4 pb-4 space-y-2" style={{ background: primary }}>
-          <Link href="/#gelombang" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
-            Gelombang PSB
-          </Link>
-          <Link href="/#program" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
-            Program Unggulan
-          </Link>
-          <Link href="/#pengajar" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
-            Pengajar & Pimpinan
-          </Link>
-          <Link href="/#galeri" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
-            Galeri
-          </Link>
-          <Link href="/#lokasi" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
-            Lokasi Peta
-          </Link>
-          <Link href="/#tentang" onClick={() => setOpen(false)} className="block text-white/80 py-2 text-sm">
-            Tentang Kami
-          </Link>
-          <Link
-            href="/daftar"
-            onClick={() => setOpen(false)}
-            className="block text-center py-2.5 rounded-full font-bold text-sm shadow"
-            style={{ background: accent, color: primary }}
+        {/* Mobile Drawer */}
+        {open && (
+          <div
+            id="mobile-nav"
+            className="lg:hidden pb-5 pt-2 border-t border-white/10 space-y-1"
           >
-            Daftar Sekarang
-          </Link>
-        </div>
-      )}
-    </nav>
+            {NAV_LINKS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-sm font-medium text-white/90 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                {item.label}
+              </Link>
+            ))}
+            <div className="pt-2">
+              <Link
+                href="/daftar"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm"
+                style={{ backgroundColor: theme.accent, color: theme.onAccent }}
+              >
+                <span>Daftar Santri Baru</span>
+                <ArrowUpRight size={16} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        )}
+      </nav>
+    </header>
   );
 }

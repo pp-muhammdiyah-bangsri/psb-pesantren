@@ -1,7 +1,27 @@
 "use client";
-import { useState } from "react";
-import { X, GraduationCap, BookOpen, Award, ArrowRight, UserCheck } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import {
+  LazyMotion,
+  AnimatePresence,
+  m,
+  useMotionValue,
+  useTransform,
+  useReducedMotion,
+  type PanInfo,
+} from "framer-motion";
+import {
+  X,
+  BookOpen,
+  Award,
+  ArrowUpRight,
+  UserCheck,
+  ChevronLeft,
+  ChevronRight,
+  MoveHorizontal,
+} from "lucide-react";
 import { toDirectImageUrl } from "@/lib/mediaUtils";
+import { buildPsbTheme, type PsbTheme } from "@/lib/themeUtils";
+import ModalDialog from "@/components/ModalDialog";
 
 export interface Pengajar {
   id: number;
@@ -61,8 +81,8 @@ const DEFAULT_PENGAJAR: Pengajar[] = [
     gelar_depan: "KH.",
     gelar_belakang: "M.Ag",
     bidang_studi: "Tafsir & Ulumul Qur'an",
-    keterangan: "Pengasuh pondok dengan pengalaman lebih dari 25 tahun membina santri, mendalami keilmuan Islam klasik di pesantren salaf dan menyelesaikan pascasarjana di UIN Sunan Kalijaga.",
-    foto_url: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600",
+    keterangan:
+      "Pengasuh pondok dengan pengalaman lebih dari 25 tahun membina santri, mendalami keilmuan Islam klasik di pesantren salaf dan menyelesaikan pascasarjana di UIN Sunan Kalijaga.",
     is_pimpinan: true,
     urutan: 1,
   },
@@ -73,8 +93,8 @@ const DEFAULT_PENGAJAR: Pengajar[] = [
     gelar_depan: "Dr. H.",
     gelar_belakang: "Lc., M.A.",
     bidang_studi: "Bahasa Arab & Dirasah Islamiyah",
-    keterangan: "Lulusan Fakultas Ushuluddin Universitas Al-Azhar Kairo, Mesir. Berdedikasi mengintegrasikan kurikulum agama klasik dan kurikulum formal modern.",
-    foto_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=600",
+    keterangan:
+      "Lulusan Fakultas Ushuluddin Universitas Al-Azhar Kairo, Mesir. Berdedikasi mengintegrasikan kurikulum agama klasik dan kurikulum formal modern.",
     is_pimpinan: true,
     urutan: 2,
   },
@@ -85,8 +105,8 @@ const DEFAULT_PENGAJAR: Pengajar[] = [
     gelar_depan: "Ust.",
     gelar_belakang: "Al-Hafizh",
     bidang_studi: "Tahfidz 30 Juz & Qira'at",
-    keterangan: "Hafizh Al-Qur'an 30 Juz bersanad muttashil ke Rasulullah SAW. Mengampu halaqah intensif tahfidz dan karantina qur'ani.",
-    foto_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=600",
+    keterangan:
+      "Hafizh Al-Qur'an 30 Juz bersanad muttashil. Mengampu halaqah intensif tahfidz dan karantina qur'ani.",
     is_pimpinan: false,
     urutan: 3,
   },
@@ -97,8 +117,8 @@ const DEFAULT_PENGAJAR: Pengajar[] = [
     gelar_depan: "Usth.",
     gelar_belakang: "S.Pd.I",
     bidang_studi: "Bahasa Arab & Akhlaq",
-    keterangan: "Alumnus PBA UIN, berfokus pada pembinaan karakter islami, adab harian santriwati, dan pembiasaan bi'ah lughawiyyah.",
-    foto_url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600",
+    keterangan:
+      "Alumnus PBA UIN, berfokus pada pembinaan karakter islami, adab harian santriwati, dan pembiasaan bi'ah lughawiyyah.",
     is_pimpinan: false,
     urutan: 4,
   },
@@ -109,8 +129,8 @@ const DEFAULT_PENGAJAR: Pengajar[] = [
     gelar_depan: "Ust.",
     gelar_belakang: "S.Si",
     bidang_studi: "Matematika & Literasi Digital",
-    keterangan: "Pembimbing olimpiade sains santri dan inisiator program literasi teknologi cerdas untuk santri modern.",
-    foto_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=600",
+    keterangan:
+      "Pembimbing olimpiade sains santri dan inisiator program literasi teknologi cerdas untuk santri modern.",
     is_pimpinan: false,
     urutan: 5,
   },
@@ -121,340 +141,637 @@ const DEFAULT_PENGAJAR: Pengajar[] = [
     gelar_depan: "Ust.",
     gelar_belakang: "S.H.I",
     bidang_studi: "Fiqih Madzhab Syafi'i",
-    keterangan: "Mengampu kajian kitab fiqih dasar hingga menengah serta membimbing praktek ibadah harian santri secara mendalam.",
-    foto_url: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=600",
+    keterangan:
+      "Mengampu kajian kitab fiqih dasar hingga menengah serta membimbing praktek ibadah harian santri secara mendalam.",
     is_pimpinan: false,
     urutan: 6,
   },
 ];
 
-function PengajarCard({ p, accent, primary, onClick }: {
+const loadMotionFeatures = () => import("framer-motion").then((mod) => mod.domMax);
+
+function getInitials(nama: string): string {
+  return nama
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+function PengajarAvatarFallback({
+  nama,
+  isPimpinan,
+  theme,
+}: {
+  nama: string;
+  isPimpinan?: boolean;
+  theme: PsbTheme;
+}) {
+  return (
+    <div
+      className="w-full h-full flex flex-col items-center justify-center p-6 relative overflow-hidden"
+      style={{
+        background: isPimpinan
+          ? `linear-gradient(145deg, ${theme.primaryDark}, ${theme.primary})`
+          : `linear-gradient(145deg, ${theme.primary}, ${theme.primaryMid})`,
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-extrabold tracking-tight border border-white/25 bg-white/15 text-white mb-2.5"
+      >
+        {getInitials(nama)}
+      </div>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/75">
+        {isPimpinan ? "Pimpinan Pondok" : "Dewan Asatidz"}
+      </span>
+    </div>
+  );
+}
+
+function FrameCardContent({
+  p,
+  index,
+  total,
+  isFront,
+  theme,
+  onOpenModal,
+}: {
   p: Pengajar;
-  accent: string;
-  primary: string;
-  onClick: () => void;
+  index: number;
+  total: number;
+  isFront: boolean;
+  theme: PsbTheme;
+  onOpenModal?: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
   const rawUrl = p.foto_url ? toDirectImageUrl(p.foto_url) : null;
-  const showFoto = rawUrl && !imgError;
-  const initials = p.nama.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+  const showFoto = Boolean(rawUrl && !imgError);
   const namaFormatted = formatNamaGelar(p);
 
   return (
     <div
-      onClick={onClick}
-      className="group relative bg-white rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl flex flex-col justify-between border"
+      className="h-full rounded-[1.75rem] p-2.5 sm:p-3 bg-white border"
       style={{
-        borderColor: p.is_pimpinan ? `${accent}50` : "#f0f2f5",
-        boxShadow: p.is_pimpinan
-          ? `0 10px 30px ${accent}25`
-          : "0 4px 20px rgba(0,0,0,0.06)",
+        borderColor: isFront ? theme.accent : "#e5e0d5",
+        boxShadow: isFront
+          ? `0 24px 48px -20px ${theme.primary}45, 0 0 0 1px ${theme.accent}55`
+          : "0 10px 24px -12px rgba(0, 0, 0, 0.14)",
       }}
     >
-      {/* Frame Foto Potret */}
-      <div className="relative h-64 sm:h-72 w-full overflow-hidden bg-gradient-to-b from-gray-100 to-gray-200">
-        {showFoto ? (
-          <img
-            src={rawUrl}
-            alt={p.nama}
-            onError={() => setImgError(true)}
-            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div
-            className="w-full h-full flex flex-col items-center justify-center p-6 text-white relative overflow-hidden"
-            style={{
-              background: p.is_pimpinan
-                ? `linear-gradient(135deg, ${accent}, #a16207)`
-                : `linear-gradient(135deg, ${primary}, #064e3b)`,
-            }}
-          >
-            {/* Background geometric decorative circles */}
-            <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
-            <div className="absolute -bottom-12 -left-12 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
-            
-            <div className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-black bg-white/20 border-2 border-white/40 shadow-xl mb-2 backdrop-blur-sm">
-              {initials}
+      <div className="h-full rounded-[1.25rem] overflow-hidden border border-stone-200/90 bg-[#faf8f4] flex flex-col justify-between">
+        <div className="flex-1 flex flex-col">
+          <div className="p-2.5 pb-0">
+            <div className="relative aspect-[4/3.8] w-full rounded-xl overflow-hidden bg-stone-100 border border-stone-200/70">
+              {showFoto && rawUrl ? (
+                <img
+                  src={rawUrl}
+                  alt={`Foto ${namaFormatted}`}
+                  loading={isFront ? "eager" : "lazy"}
+                  decoding="async"
+                  draggable={false}
+                  referrerPolicy="no-referrer"
+                  onError={() => setImgError(true)}
+                  className="w-full h-full object-cover object-top pointer-events-none"
+                />
+              ) : (
+                <PengajarAvatarFallback nama={p.nama} isPimpinan={p.is_pimpinan} theme={theme} />
+              )}
+
+              <div className="absolute top-2.5 left-2.5 z-10">
+                {p.is_pimpinan ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/95 shadow-sm border"
+                    style={{ color: theme.accentTextOnLight, borderColor: `${theme.accent}80` }}
+                  >
+                    <Award size={11} aria-hidden="true" />
+                    <span>Pimpinan Pondok</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/95 text-stone-700 shadow-sm">
+                    <UserCheck size={11} style={{ color: theme.primary }} aria-hidden="true" />
+                    <span>Tenaga Pendidik</span>
+                  </span>
+                )}
+              </div>
+
+              <span className="absolute bottom-2.5 right-2.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-black/65 text-white tabular-nums">
+                {index + 1} / {total}
+              </span>
             </div>
-            <span className="text-xs font-semibold text-white/80 uppercase tracking-widest mt-1">
-              Profil Asatidz
-            </span>
           </div>
-        )}
 
-        {/* Floating Badge (Pimpinan / Pengajar) */}
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-          {p.is_pimpinan ? (
-            <span
-              className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg backdrop-blur-md"
-              style={{
-                background: "rgba(255, 255, 255, 0.95)",
-                color: "#854d0e",
-                border: `1.5px solid ${accent}`,
-              }}
+          <div className="flex-1 flex flex-col justify-center p-4 sm:p-5 space-y-2 text-center">
+            <p
+              className="text-[11px] font-bold uppercase tracking-[0.14em] line-clamp-2"
+              style={{ color: p.is_pimpinan ? theme.accentTextOnLight : theme.primary }}
             >
-              <Award size={13} className="text-amber-500 fill-amber-500" />
-              Pimpinan Pondok
-            </span>
-          ) : (
-            <span
-              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-md backdrop-blur-md bg-white/90 text-gray-700"
-            >
-              <UserCheck size={12} style={{ color: primary }} />
-              Tenaga Pendidik
-            </span>
-          )}
-        </div>
-
-        {/* Gradient shadow overlay at bottom of photo */}
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
-      </div>
-
-      {/* Card Content Body */}
-      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
-        <div>
-          {/* Jabatan Tag */}
-          <p
-            className="text-xs font-bold uppercase tracking-wide mb-1"
-            style={{ color: p.is_pimpinan ? "#b45309" : primary }}
-          >
-            {p.jabatan}
-          </p>
-
-          {/* Nama Lengkap & Gelar */}
-          <h3 className="font-extrabold text-base sm:text-lg text-gray-900 leading-snug group-hover:text-emerald-800 transition-colors line-clamp-2">
-            {namaFormatted}
-          </h3>
-
-          {/* Bidang Studi */}
-          {p.bidang_studi && (
-            <div
-              className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-              style={{
-                background: p.is_pimpinan ? `${accent}15` : `${primary}10`,
-                color: p.is_pimpinan ? "#854d0e" : primary,
-              }}
-            >
-              <BookOpen size={12} className="shrink-0" />
-              <span className="line-clamp-1">{p.bidang_studi}</span>
-            </div>
-          )}
-
-          {/* Biografi Cuplikan */}
-          {p.keterangan && (
-            <p className="text-xs text-gray-500 mt-3 line-clamp-2 leading-relaxed">
-              {p.keterangan}
+              {p.jabatan}
             </p>
-          )}
+
+            <h3 className="font-display font-bold text-xl text-stone-900 leading-snug line-clamp-2">
+              {namaFormatted}
+            </h3>
+
+            {p.bidang_studi && (
+              <div
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold max-w-full mx-auto"
+                style={{
+                  backgroundColor: p.is_pimpinan ? `${theme.accent}22` : theme.primarySoft,
+                  color: p.is_pimpinan ? theme.accentTextOnLight : theme.primary,
+                }}
+              >
+                <BookOpen size={12} className="shrink-0" aria-hidden="true" />
+                <span className="line-clamp-1">{p.bidang_studi}</span>
+              </div>
+            )}
+
+            {p.keterangan && (
+              <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed pt-0.5">
+                {p.keterangan}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Action Button Strip */}
-        <div className="mt-5 pt-3.5 border-t border-gray-100 flex items-center justify-between text-xs font-bold transition-all" style={{ color: primary }}>
-          <span>Lihat Profil Lengkap</span>
-          <ArrowRight size={14} className="transform group-hover:translate-x-1.5 transition-transform" />
+        <div className="border-t border-stone-200/70 bg-white shrink-0">
+          <button
+            type="button"
+            tabIndex={isFront ? 0 : -1}
+            onPointerDownCapture={(e) => e.stopPropagation()}
+            onClick={onOpenModal}
+            className="w-full px-5 py-3 flex items-center justify-center gap-1.5 text-xs font-bold hover:bg-stone-50 transition-colors cursor-pointer"
+            style={{ color: theme.primary }}
+          >
+            <span>Lihat Profil Lengkap</span>
+            <ArrowUpRight size={14} aria-hidden="true" />
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function PengajarModal({ p, accent, primary, onClose }: {
+const FRONT_CARD_VARIANTS = {
+  enter: ({ dir, reduced }: { dir: number; reduced: boolean }) =>
+    reduced
+      ? { x: dir >= 0 ? 48 : -48, y: 0, scale: 1, rotate: 0, opacity: 0 }
+      : dir >= 0
+      ? { x: 0, y: 12, scale: 0.955, rotate: 2.1, opacity: 0.86 }
+      : { x: -340, y: 0, scale: 0.95, rotate: -10, opacity: 0 },
+  center: ({ reduced }: { dir: number; reduced: boolean }) => ({
+    x: 0,
+    y: 0,
+    scale: 1,
+    rotate: 0,
+    opacity: 1,
+    transition: reduced
+      ? { duration: 0.36, ease: [0.22, 1, 0.36, 1] as const }
+      : { type: "spring" as const, stiffness: 150, damping: 22, mass: 1.05 },
+  }),
+  exit: ({ dir, reduced }: { dir: number; reduced: boolean }) =>
+    reduced
+      ? {
+          x: dir >= 0 ? -56 : 56,
+          opacity: 0,
+          transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] as const },
+        }
+      : {
+          x: dir >= 0 ? -360 : 360,
+          rotate: dir >= 0 ? -12 : 12,
+          opacity: 0,
+          scale: 0.94,
+          transition: { duration: 0.52, ease: [0.22, 1, 0.36, 1] as const },
+        },
+};
+
+function FrontStackCard({
+  p,
+  index,
+  total,
+  theme,
+  swipeDir,
+  reducedMotion,
+  onSwipe,
+  onOpenModal,
+}: {
   p: Pengajar;
-  accent: string;
-  primary: string;
+  index: number;
+  total: number;
+  theme: PsbTheme;
+  swipeDir: 1 | -1;
+  reducedMotion: boolean;
+  onSwipe: (direction: 1 | -1) => void;
+  onOpenModal: () => void;
+}) {
+  const dragX = useMotionValue(0);
+  const dragRotate = useTransform(dragX, [-220, 0, 220], reducedMotion ? [0, 0, 0] : [-9, 0, 9]);
+  const wasDraggedRef = useRef(false);
+
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const swipedFarEnough = Math.abs(info.offset.x) > 65;
+    const swipedFastEnough = Math.abs(info.velocity.x) > 360;
+
+    if (swipedFarEnough || swipedFastEnough) {
+      const direction: 1 | -1 = info.offset.x < 0 || info.velocity.x < 0 ? 1 : -1;
+      onSwipe(direction);
+    }
+    window.setTimeout(() => {
+      wasDraggedRef.current = false;
+    }, 60);
+  };
+
+  return (
+    <m.div
+      role="group"
+      aria-roledescription="slide"
+      aria-label={`${index + 1} dari ${total}: ${formatNamaGelar(p)}`}
+      style={{
+        zIndex: 30,
+        x: dragX,
+        rotate: dragRotate,
+        touchAction: "pan-y",
+      }}
+      custom={{ dir: swipeDir, reduced: reducedMotion }}
+      variants={FRONT_CARD_VARIANTS}
+      initial="enter"
+      animate="center"
+      exit="exit"
+      drag={total > 1 ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.48}
+      dragTransition={{ bounceStiffness: 170, bounceDamping: 22 }}
+      whileDrag={reducedMotion ? { cursor: "grabbing" } : { scale: 1.02, cursor: "grabbing" }}
+      onDragStart={() => {
+        wasDraggedRef.current = true;
+      }}
+      onDragEnd={handleDragEnd}
+      className={`absolute inset-0 select-none ${total > 1 ? "cursor-grab" : ""}`}
+    >
+      <FrameCardContent
+        p={p}
+        index={index}
+        total={total}
+        isFront
+        theme={theme}
+        onOpenModal={() => {
+          if (!wasDraggedRef.current) onOpenModal();
+        }}
+      />
+    </m.div>
+  );
+}
+
+function PengajarModal({
+  p,
+  theme,
+  onClose,
+}: {
+  p: Pengajar | null;
+  theme: PsbTheme;
   onClose: () => void;
 }) {
   const [imgError, setImgError] = useState(false);
+
+  if (!p) {
+    return (
+      <ModalDialog open={false} onClose={onClose} ariaLabel="Profil Pengajar">
+        {null}
+      </ModalDialog>
+    );
+  }
+
   const rawUrl = p.foto_url ? toDirectImageUrl(p.foto_url) : null;
-  const showFoto = rawUrl && !imgError;
-  const initials = p.nama.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+  const showFoto = Boolean(rawUrl && !imgError);
   const namaFormatted = formatNamaGelar(p);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(6px)" }}
-      onClick={onClose}
+    <ModalDialog
+      open={Boolean(p)}
+      onClose={onClose}
+      labelledBy="pengajar-modal-title"
+      className="w-full max-w-md"
     >
-      <div
-        className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Modal Header with Photo / Banner */}
-        <div className="relative h-60 w-full bg-gray-900">
+      <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-stone-200">
+        <div className="relative h-72 w-full bg-stone-900">
           <button
+            type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors backdrop-blur-sm"
+            aria-label="Tutup profil pengajar"
+            className="absolute top-3 right-3 z-20 min-w-10 min-h-10 rounded-full bg-black/55 hover:bg-black/75 flex items-center justify-center text-white transition-colors cursor-pointer"
           >
-            <X size={18} />
+            <X size={18} aria-hidden="true" />
           </button>
 
-          {showFoto ? (
+          {showFoto && rawUrl ? (
             <img
               src={rawUrl}
-              alt={p.nama}
+              alt={`Foto ${namaFormatted}`}
+              referrerPolicy="no-referrer"
               onError={() => setImgError(true)}
-              className="w-full h-full object-cover object-center"
+              className="w-full h-full object-cover object-[50%_20%]"
             />
           ) : (
-            <div
-              className="w-full h-full flex flex-col items-center justify-center text-white p-6"
-              style={{
-                background: p.is_pimpinan
-                  ? `linear-gradient(135deg, ${accent}, #a16207)`
-                  : `linear-gradient(135deg, ${primary}, #064e3b)`,
-              }}
-            >
-              <div className="w-24 h-24 rounded-2xl flex items-center justify-center text-3xl font-black bg-white/20 border-2 border-white/40 shadow-xl mb-1">
-                {initials}
-              </div>
-            </div>
+            <PengajarAvatarFallback nama={p.nama} isPimpinan={p.is_pimpinan} theme={theme} />
           )}
 
-          {/* Floating Badge in Modal */}
           {p.is_pimpinan && (
             <div className="absolute top-3 left-3 z-10">
               <span
-                className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase px-3 py-1.5 rounded-full shadow-lg backdrop-blur-md"
-                style={{ background: "#ffffff", color: "#854d0e", border: `1.5px solid ${accent}` }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold uppercase px-3 py-1 rounded-full bg-white shadow-sm border"
+                style={{ color: theme.accentTextOnLight, borderColor: theme.accent }}
               >
-                <Award size={14} className="text-amber-500 fill-amber-500" />
-                Pimpinan Pondok
+                <Award size={13} aria-hidden="true" />
+                <span>Pimpinan Pondok</span>
               </span>
             </div>
           )}
 
-          {/* Vignette */}
-          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none" />
-          
-          <div className="absolute bottom-3 left-5 right-5 text-white z-10">
-            <p className="text-xs font-semibold text-white/80 uppercase tracking-wider">{p.jabatan}</p>
-            <h2 className="text-xl font-black leading-tight drop-shadow-md">{namaFormatted}</h2>
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 via-black/45 to-transparent"
+          />
+
+          <div className="absolute bottom-3.5 left-5 right-5 text-white z-10">
+            <p className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+              {p.jabatan}
+            </p>
+            <h3 id="pengajar-modal-title" className="text-xl font-bold leading-tight mt-0.5">
+              {namaFormatted}
+            </h3>
           </div>
         </div>
 
-        {/* Modal Body */}
         <div className="p-6 space-y-4">
           {p.bidang_studi && (
             <div
               className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold"
-              style={{ background: `${primary}12`, color: primary }}
+              style={{ backgroundColor: theme.primarySoft, color: theme.primary }}
             >
-              <BookOpen size={14} />
+              <BookOpen size={14} aria-hidden="true" />
               <span>Bidang Keahlian: {p.bidang_studi}</span>
             </div>
           )}
 
           {p.keterangan ? (
-            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-              <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-                Biografi & Riwayat Pendidikan
+            <div className="bg-[#faf8f4] rounded-2xl p-4 border border-stone-200/80">
+              <h4 className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-1.5">
+                Biografi &amp; Riwayat
               </h4>
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">
+              <p className="text-sm text-stone-700 leading-relaxed whitespace-pre-line">
                 {p.keterangan}
               </p>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 italic">Belum ada rincian biografi yang ditambahkan.</p>
+            <p className="text-xs text-stone-500 italic">
+              Belum ada rincian biografi yang ditambahkan.
+            </p>
           )}
 
           <button
+            type="button"
             onClick={onClose}
-            className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-95 shadow-md"
-            style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}
+            className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-95 cursor-pointer"
+            style={{ backgroundColor: theme.primary }}
           >
             Tutup Profil
           </button>
         </div>
       </div>
-    </div>
+    </ModalDialog>
   );
 }
 
 export default function PengajarSection({ pengajar, config }: PengajarSectionProps) {
   const [selected, setSelected] = useState<Pengajar | null>(null);
-  const primary = config.warna_primer || "#0f4c1e";
-  const accent = config.warna_aksen || "#c8a84b";
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
+  const [statusMessage, setStatusMessage] = useState("");
+  const reducedMotion = Boolean(useReducedMotion());
 
-  if (config.tampilkan_pengajar === "false") return null;
+  const theme = buildPsbTheme(config);
 
-  const displayList = pengajar && pengajar.length > 0 ? pengajar : DEFAULT_PENGAJAR;
-  const pimpinan = displayList.filter(p => p.is_pimpinan);
-  const pengajarBiasa = displayList.filter(p => !p.is_pimpinan);
+  const rawList = pengajar && pengajar.length > 0 ? pengajar : DEFAULT_PENGAJAR;
+  const orderedList = [
+    ...rawList.filter((p) => p.is_pimpinan),
+    ...rawList.filter((p) => !p.is_pimpinan),
+  ];
+  const total = orderedList.length;
+
+  const goToIndex = useCallback(
+    (nextIdx: number, direction: 1 | -1) => {
+      if (total <= 1) return;
+      const wrapped = ((nextIdx % total) + total) % total;
+      setSwipeDir(direction);
+      setActiveIndex(wrapped);
+      if (orderedList[wrapped]) {
+        setStatusMessage(
+          `Menampilkan bingkai ${wrapped + 1} dari ${total}: ${formatNamaGelar(orderedList[wrapped])}`
+        );
+      }
+    },
+    [orderedList, total]
+  );
+
+  const handleStep = useCallback(
+    (direction: 1 | -1) => {
+      goToIndex(activeIndex + direction, direction);
+    },
+    [activeIndex, goToIndex]
+  );
+
+  if (config.tampilkan_pengajar === "false" || total === 0) return null;
+
+  const frontItem = orderedList[activeIndex];
+  const backCount = Math.min(3, Math.max(0, total - 1));
+  const backStack = Array.from({ length: backCount }, (_, i) => {
+    const offset = i + 1;
+    const idx = (activeIndex + offset) % total;
+    return { item: orderedList[idx], index: idx, offset };
+  });
 
   return (
-    <>
-      <section id="pengajar" className="py-24 px-4 sm:px-6 lg:px-8" style={{ background: "#f8fafb" }}>
-        <div className="max-w-7xl mx-auto">
-          {/* Header Section */}
-          <div className="text-center mb-16">
-            <p className="text-xs sm:text-sm font-bold uppercase tracking-widest mb-2" style={{ color: accent }}>
-              {config.pengajar_badge || "Dewan Asatidz & Pimpinan"}
-            </p>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-3" style={{ color: primary }}>
-              {config.pengajar_judul || "Diasuh oleh Tenaga Pendidik Berpengalaman & Bersanad"}
-            </h2>
-            <div className="w-20 h-1.5 mx-auto rounded-full mb-4" style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }} />
-            <p className="text-sm sm:text-base text-gray-500 max-w-2xl mx-auto leading-relaxed">
-              {config.pengajar_deskripsi || "Mendidik dengan keteladanan, membimbing dengan keikhlasan. Menjamin mutu pendidikan akademik dan ketakwaan spiritual ananda."}
-            </p>
+    <LazyMotion features={loadMotionFeatures}>
+      <section
+          id="pengajar"
+          aria-roledescription="carousel"
+          aria-label="Tumpukan Bingkai Dewan Asatidz dan Pimpinan"
+          className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-[#faf8f4] overflow-hidden"
+        >
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+              {/* Kolom Kiri: Editorial Info */}
+              <div className="lg:col-span-5 flex flex-col items-center lg:items-start text-center lg:text-left space-y-5">
+                <div className="space-y-3">
+                  <p
+                    className="text-xs font-bold uppercase tracking-[0.18em]"
+                    style={{ color: theme.accentTextOnLight }}
+                  >
+                    {config.pengajar_badge || "Dewan Asatidz & Pimpinan"}
+                  </p>
+                  <h2
+                    className="font-display text-3xl sm:text-4xl font-bold leading-tight"
+                    style={{ color: theme.primary }}
+                  >
+                    {config.pengajar_judul ||
+                      "Diasuh oleh Tenaga Pendidik Berpengalaman & Bersanad"}
+                  </h2>
+                  <p className="text-sm sm:text-base text-stone-600 leading-relaxed">
+                    {config.pengajar_deskripsi ||
+                      "Geser tumpukan bingkai ke kiri atau kanan untuk mengenal profil pimpinan dan asatidz pengajar."}
+                  </p>
+                </div>
+
+                {total > 1 && (
+                  <p className="inline-flex items-center gap-2 text-xs text-stone-600 font-medium px-3.5 py-2 rounded-full bg-white border border-stone-200/80">
+                    <MoveHorizontal size={15} style={{ color: theme.primary }} aria-hidden="true" />
+                    <span>Tarik bingkai atau klik panah di sisi kartu ({activeIndex + 1}/{total})</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Kolom Kanan: Tumpukan Bingkai Kartu + Panah Kiri/Kanan + Titik di Bawah */}
+              <div className="lg:col-span-7 flex flex-col items-center">
+                <div className="relative w-full max-w-[355px] sm:max-w-[395px] mx-auto">
+                  {total > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleStep(-1)}
+                        aria-label="Bingkai pengajar sebelumnya"
+                        className="absolute -left-2.5 sm:-left-16 top-[165px] sm:top-1/2 -translate-y-1/2 z-40 min-w-11 min-h-11 rounded-full bg-white/95 border border-stone-300 text-stone-800 flex items-center justify-center shadow-md transition-all hover:bg-white hover:border-stone-400 active:scale-95 cursor-pointer"
+                      >
+                        <ChevronLeft size={20} aria-hidden="true" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleStep(1)}
+                        aria-label="Bingkai pengajar berikutnya"
+                        className="absolute -right-2.5 sm:-right-16 top-[165px] sm:top-1/2 -translate-y-1/2 z-40 min-w-11 min-h-11 rounded-full text-white flex items-center justify-center shadow-md transition-all hover:opacity-95 active:scale-95 cursor-pointer border border-black/10"
+                        style={{ backgroundColor: theme.primary }}
+                      >
+                        <ChevronRight size={20} aria-hidden="true" />
+                      </button>
+                    </>
+                  )}
+
+                  <div
+                    role="region"
+                    aria-label="Tumpukan kartu profil pengajar"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowLeft") {
+                        e.preventDefault();
+                        handleStep(-1);
+                      } else if (e.key === "ArrowRight") {
+                        e.preventDefault();
+                        handleStep(1);
+                      }
+                    }}
+                    className="relative w-full h-[505px] sm:h-[535px]"
+                  >
+                    {/* Lapisan kartu di belakang tumpukan */}
+                    {backStack.map(({ item, index, offset }) => {
+                      const targetY = offset * 12;
+                      const targetX = offset % 2 === 1 ? offset * 8 : -offset * 6;
+                      const targetScale = 1 - offset * 0.045;
+                      const targetRotate = offset % 2 === 1 ? offset * 2.1 : -offset * 2.1;
+                      const targetOpacity = Math.max(0.55, 1 - offset * 0.16);
+
+                      return (
+                        <m.div
+                          key={`bg-${item.id}`}
+                          aria-hidden="true"
+                          style={{ zIndex: 20 - offset }}
+                          initial={false}
+                          animate={{
+                            x: targetX,
+                            y: targetY,
+                            scale: targetScale,
+                            rotate: targetRotate,
+                            opacity: targetOpacity,
+                          }}
+                          transition={
+                            reducedMotion
+                              ? { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
+                              : { type: "spring", stiffness: 140, damping: 22, mass: 1.05 }
+                          }
+                          className="absolute inset-0 pointer-events-none select-none"
+                        >
+                          <FrameCardContent
+                            p={item}
+                            index={index}
+                            total={total}
+                            isFront={false}
+                            theme={theme}
+                          />
+                        </m.div>
+                      );
+                    })}
+
+                    {/* Kartu paling depan yang bisa di-drag / swipe */}
+                    <AnimatePresence initial={false} custom={{ dir: swipeDir, reduced: reducedMotion }}>
+                      <FrontStackCard
+                        key={frontItem.id}
+                        p={frontItem}
+                        index={activeIndex}
+                        total={total}
+                        theme={theme}
+                        swipeDir={swipeDir}
+                        reducedMotion={reducedMotion}
+                        onSwipe={handleStep}
+                        onOpenModal={() => setSelected(frontItem)}
+                      />
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                {/* Marker Dots di bawah card foto */}
+                {total > 1 && (
+                  <nav aria-label="Pilih bingkai pengajar" className="mt-11 max-w-full">
+                    <ul className="flex items-center justify-center gap-0.5 flex-wrap">
+                      {orderedList.map((p, idx) => {
+                        const isActive = idx === activeIndex;
+                        return (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              onClick={() => goToIndex(idx, idx > activeIndex ? 1 : -1)}
+                              aria-label={`Bingkai ${idx + 1}: ${formatNamaGelar(p)}`}
+                              aria-current={isActive ? "true" : undefined}
+                              className="min-w-5 min-h-6 px-0.5 py-2 flex items-center justify-center cursor-pointer"
+                            >
+                              <span
+                                aria-hidden="true"
+                                className="block h-2 rounded-full transition-all duration-200"
+                                style={{
+                                  width: isActive ? "1.35rem" : "0.45rem",
+                                  backgroundColor: isActive ? theme.primary : "#d6d3d1",
+                                  border: isActive
+                                    ? `1px solid ${theme.primaryDark}`
+                                    : "1px solid transparent",
+                                }}
+                              />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </nav>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Baris Pimpinan Pondok */}
-          {pimpinan.length > 0 && (
-            <div className="mb-14">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-200 to-transparent" />
-                <span
-                  className="text-xs font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-sm"
-                  style={{ background: `${accent}20`, color: "#854d0e" }}
-                >
-                  Pimpinan Pondok Pesantren
-                </span>
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-200 to-transparent" />
-              </div>
+          <p className="visually-hidden" role="status" aria-live="polite">
+            {statusMessage}
+          </p>
+        </section>
 
-              <div className={`grid gap-6 ${
-                pimpinan.length === 1
-                  ? "max-w-sm mx-auto"
-                  : pimpinan.length === 2
-                  ? "grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto"
-              }`}>
-                {pimpinan.map(p => (
-                  <PengajarCard key={p.id} p={p} accent={accent} primary={primary} onClick={() => setSelected(p)} />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Baris Tim Pengajar / Asatidz */}
-          {pengajarBiasa.length > 0 && (
-            <div>
-              {pimpinan.length > 0 && (
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-                  <span className="text-xs font-bold uppercase tracking-widest px-4 py-1 rounded-full bg-gray-100 text-gray-600">
-                    Tim Pengajar & Asatidz
-                  </span>
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {pengajarBiasa.map(p => (
-                  <PengajarCard key={p.id} p={p} accent={accent} primary={primary} onClick={() => setSelected(p)} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Modal Detail Pop-up */}
-      {selected && (
-        <PengajarModal p={selected} accent={accent} primary={primary} onClose={() => setSelected(null)} />
-      )}
-    </>
+        <PengajarModal p={selected} theme={theme} onClose={() => setSelected(null)} />
+    </LazyMotion>
   );
 }

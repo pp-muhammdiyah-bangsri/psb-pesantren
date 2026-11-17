@@ -1,69 +1,123 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { BookOpen, MapPin, Phone, Mail, Heart } from "lucide-react";
 import { toDirectImageUrl } from "@/lib/mediaUtils";
+import { buildPsbTheme, formatPhoneDisplay } from "@/lib/themeUtils";
 
 interface FooterProps {
   config: Record<string, string>;
 }
 
 export default function Footer({ config }: FooterProps) {
-  const primary = config.warna_primer || "#0f4c1e";
-  const accent = config.warna_aksen || "#c8a84b";
+  const [logoError, setLogoError] = useState(false);
+  const theme = buildPsbTheme(config);
   const nama = config.nama_pesantren || "Pesantren";
+  const logoSrc = config.logo_url && !logoError ? toDirectImageUrl(config.logo_url) : null;
 
   return (
-    <footer id="footer" style={{ background: primary, borderTop: `1px solid ${accent}30` }}>
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
+    <footer
+      id="footer"
+      className="text-white border-t border-white/10"
+      style={{ backgroundColor: theme.primaryDark }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-14">
+        <div className="grid md:grid-cols-12 gap-8 pb-10 text-center md:text-left">
           {/* Brand */}
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              {config.logo_url ? (
-                <img src={toDirectImageUrl(config.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="h-10 w-10 rounded-full object-cover bg-white/10" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
+          <div className="md:col-span-5 flex flex-col items-center md:items-start space-y-4">
+            <div className="flex items-center gap-3">
+              {logoSrc ? (
+                <img
+                  src={logoSrc}
+                  alt={`Logo ${nama}`}
+                  width={40}
+                  height={40}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  onError={() => setLogoError(true)}
+                  className="h-10 w-10 rounded-full object-cover bg-white/10 ring-1 ring-white/20 shrink-0"
+                />
               ) : (
-                <div className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: `${accent}20`, border: `1px solid ${accent}50` }}>
-                  <BookOpen size={20} style={{ color: accent }} />
+                <div
+                  className="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${theme.accent}25`, border: `1px solid ${theme.accent}60` }}
+                >
+                  <BookOpen size={19} style={{ color: theme.accentLight }} aria-hidden="true" />
                 </div>
               )}
-              <h3 className="text-white font-bold text-sm">{nama}</h3>
+              <h3 className="text-white font-bold text-base leading-snug">{nama}</h3>
             </div>
-            <p className="text-white/50 text-sm leading-relaxed">{config.tagline}</p>
+            {config.tagline && (
+              <p className="text-white/75 text-sm leading-relaxed max-w-md">{config.tagline}</p>
+            )}
           </div>
 
           {/* Kontak */}
-          <div>
-            <h4 className="font-semibold mb-4" style={{ color: accent }}>Kontak</h4>
-            <div className="space-y-2 text-sm text-white/60">
+          <div className="md:col-span-4 space-y-3.5">
+            <h4 className="font-bold text-xs uppercase tracking-widest" style={{ color: theme.accentLight }}>
+              Sekretariat &amp; Kontak
+            </h4>
+            <div className="space-y-2.5 text-sm text-white/80">
               {config.alamat && (
-                <div className="flex gap-2"><MapPin size={14} className="mt-0.5 shrink-0" style={{ color: accent }} /><span>{config.alamat}</span></div>
+                <div className="flex justify-center md:justify-start gap-2.5">
+                  <MapPin size={15} className="mt-0.5 shrink-0" style={{ color: theme.accentLight }} aria-hidden="true" />
+                  <span>{config.alamat}</span>
+                </div>
               )}
               {config.no_wa_admin && (
-                <div className="flex gap-2"><Phone size={14} style={{ color: accent }} /><span>{config.no_wa_admin}</span></div>
+                <div className="flex items-center justify-center md:justify-start gap-2.5">
+                  <Phone size={15} className="shrink-0" style={{ color: theme.accentLight }} aria-hidden="true" />
+                  <span className="tabular-nums">{formatPhoneDisplay(config.no_wa_admin)}</span>
+                </div>
               )}
               {config.email && (
-                <div className="flex gap-2"><Mail size={14} style={{ color: accent }} /><span>{config.email}</span></div>
+                <div className="flex items-center justify-center md:justify-start gap-2.5">
+                  <Mail size={15} className="shrink-0" style={{ color: theme.accentLight }} aria-hidden="true" />
+                  <span>{config.email}</span>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Links */}
-          <div>
-            <h4 className="font-semibold mb-4" style={{ color: accent }}>Pendaftaran</h4>
-            <div className="space-y-2">
-              <Link href="/daftar" className="block text-sm text-white/60 hover:text-white transition-colors">Form Pendaftaran</Link>
-              <Link href="/#gelombang" className="block text-sm text-white/60 hover:text-white transition-colors">Gelombang PSB</Link>
-              <Link href="/#program" className="block text-sm text-white/60 hover:text-white transition-colors">Program Unggulan</Link>
-              <Link href="/#galeri" className="block text-sm text-white/60 hover:text-white transition-colors">Galeri Pesantren</Link>
-              <Link href="/admin/login" className="block text-sm text-white/30 hover:text-white/60 transition-colors">Admin Panel</Link>
-            </div>
+          {/* Tautan */}
+          <div className="md:col-span-3 space-y-3.5">
+            <h4 className="font-bold text-xs uppercase tracking-widest" style={{ color: theme.accentLight }}>
+              Navigasi PSB
+            </h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/daftar" className="text-white/80 hover:text-white transition-colors">
+                  Formulir Pendaftaran
+                </Link>
+              </li>
+              <li>
+                <Link href="/#gelombang" className="text-white/80 hover:text-white transition-colors">
+                  Gelombang PSB
+                </Link>
+              </li>
+              <li>
+                <Link href="/#program" className="text-white/80 hover:text-white transition-colors">
+                  Program Unggulan
+                </Link>
+              </li>
+              <li>
+                <Link href="/#galeri" className="text-white/80 hover:text-white transition-colors">
+                  Galeri Pesantren
+                </Link>
+              </li>
+              <li>
+                <Link href="/admin/login" className="text-white/65 hover:text-white transition-colors">
+                  Portal Admin
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
-        <div className="border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-2" style={{ borderColor: `${accent}20` }}>
-          <p className="text-white/30 text-xs">© {new Date().getFullYear()} {nama}. Hak cipta dilindungi.</p>
-          <p className="text-white/20 text-xs flex items-center gap-1">
-            Dibuat dengan <Heart size={10} fill="currentColor" /> menggunakan SIMPLE Pesantren
+        <div className="border-t border-white/15 pt-6 pb-14 sm:pb-2 lg:pr-44 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white/70">
+          <p>{config.footer_hak_cipta || `© ${new Date().getFullYear()} ${nama}. Hak cipta dilindungi.`}</p>
+          <p className="inline-flex items-center gap-1.5">
+            Dibuat dengan <Heart size={11} className="fill-current text-amber-300" aria-hidden="true" /> menggunakan SIMPLE Pesantren
           </p>
         </div>
       </div>

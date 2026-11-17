@@ -1,28 +1,45 @@
 "use client";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useId, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  User, MapPin, GraduationCap, Users, Upload,
-  CheckCircle, ArrowLeft, ArrowRight, Send, BookOpen, AlertCircle, FileCheck, X, MessageCircle, Copy
+  User,
+  MapPin,
+  Users,
+  Upload,
+  CheckCircle2,
+  ArrowLeft,
+  ArrowRight,
+  Send,
+  AlertCircle,
+  FileCheck,
+  X,
+  MessageCircle,
+  Copy,
+  Info,
+  ClipboardCheck,
+  Calendar,
+  ChevronDown,
 } from "lucide-react";
+import { buildPsbTheme, type PsbTheme } from "@/lib/themeUtils";
+import ModalDialog from "@/components/ModalDialog";
 
 const PROVINSI = [
-  "Aceh","Bali","Banten","Bengkulu","DI Yogyakarta","DKI Jakarta","Gorontalo",
-  "Jambi","Jawa Barat","Jawa Tengah","Jawa Timur","Kalimantan Barat",
-  "Kalimantan Selatan","Kalimantan Tengah","Kalimantan Timur","Kalimantan Utara",
-  "Kepulauan Bangka Belitung","Kepulauan Riau","Lampung","Maluku","Maluku Utara",
-  "Nusa Tenggara Barat","Nusa Tenggara Timur","Papua","Papua Barat","Papua Barat Daya",
-  "Papua Pegunungan","Papua Selatan","Papua Tengah","Riau","Sulawesi Barat",
-  "Sulawesi Selatan","Sulawesi Tengah","Sulawesi Tenggara","Sulawesi Utara","Sumatera Barat",
-  "Sumatera Selatan","Sumatera Utara"
+  "Aceh", "Bali", "Banten", "Bengkulu", "DI Yogyakarta", "DKI Jakarta", "Gorontalo",
+  "Jambi", "Jawa Barat", "Jawa Tengah", "Jawa Timur", "Kalimantan Barat",
+  "Kalimantan Selatan", "Kalimantan Tengah", "Kalimantan Timur", "Kalimantan Utara",
+  "Kepulauan Bangka Belitung", "Kepulauan Riau", "Lampung", "Maluku", "Maluku Utara",
+  "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Papua", "Papua Barat", "Papua Barat Daya",
+  "Papua Pegunungan", "Papua Selatan", "Papua Tengah", "Riau", "Sulawesi Barat",
+  "Sulawesi Selatan", "Sulawesi Tengah", "Sulawesi Tenggara", "Sulawesi Utara", "Sumatera Barat",
+  "Sumatera Selatan", "Sumatera Utara",
 ];
 
 const STEPS = [
-  { id: 1, label: "Jalur & Biodata", icon: User },
-  { id: 2, label: "Pendidikan & Alamat", icon: MapPin },
-  { id: 3, label: "Orang Tua / Wali", icon: Users },
-  { id: 4, label: "Dokumen & Syarat", icon: Upload },
+  { id: 1, label: "Jalur & Biodata", shortLabel: "Biodata", icon: User },
+  { id: 2, label: "Pendidikan & Alamat", shortLabel: "Alamat", icon: MapPin },
+  { id: 3, label: "Orang Tua / Wali", shortLabel: "Wali", icon: Users },
+  { id: 4, label: "Dokumen & Syarat", shortLabel: "Dokumen", icon: Upload },
 ];
 
 const DEFAULT_SYARAT = [
@@ -52,34 +69,103 @@ const INITIAL: FormData = {
   foto: null, kk: null, akta: null, sktm: null,
 };
 
-function InputField({ label, required, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; required?: boolean }) {
+function InputField({
+  label,
+  required,
+  hint,
+  error,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  label: string;
+  required?: boolean;
+  hint?: string;
+  error?: string;
+}) {
+  const inputId = useId();
+  const hintId = hint ? `${inputId}-hint` : undefined;
+  const errorId = error ? `${inputId}-error` : undefined;
+  const describedBy = [errorId, hintId].filter(Boolean).join(" ") || undefined;
+
   return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-gray-700">
-        {label} {required && <span className="text-red-500">*</span>}
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={inputId} className="text-sm font-semibold text-stone-800">
+        {label} {required && <span className="text-red-600" aria-hidden="true">*</span>}
       </label>
       <input
-        className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 transition-all"
-        style={{ borderColor: "#e0e0e0" }}
+        id={inputId}
+        required={required}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy}
+        data-invalid={error ? "true" : undefined}
+        className={`border rounded-xl px-4 py-2.5 text-sm text-stone-900 bg-white placeholder:text-stone-400 transition-colors ${
+          error
+            ? "border-red-500 ring-2 ring-red-500/15 focus:border-red-600"
+            : "border-stone-300 focus:border-emerald-700"
+        }`}
         {...props}
       />
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-red-700 font-medium flex items-center gap-1">
+          <AlertCircle size={13} className="shrink-0" aria-hidden="true" />
+          <span>{error}</span>
+        </p>
+      )}
+      {hint && (
+        <p id={hintId} className="text-xs text-stone-500 leading-relaxed">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
 
-function SelectField({ label, required, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string; required?: boolean }) {
+function SelectField({
+  label,
+  required,
+  error,
+  children,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement> & {
+  label: string;
+  required?: boolean;
+  error?: string;
+}) {
+  const selectId = useId();
+  const errorId = error ? `${selectId}-error` : undefined;
+
   return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-gray-700">
-        {label} {required && <span className="text-red-500">*</span>}
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={selectId} className="text-sm font-semibold text-stone-800">
+        {label} {required && <span className="text-red-600" aria-hidden="true">*</span>}
       </label>
-      <select
-        className="border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 bg-white transition-all"
-        style={{ borderColor: "#e0e0e0" }}
-        {...props}
-      >
-        {children}
-      </select>
+      <div className="relative">
+        <select
+          id={selectId}
+          required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
+          data-invalid={error ? "true" : undefined}
+          className={`w-full appearance-none border rounded-xl pl-4 pr-10 py-2.5 text-sm text-stone-900 bg-white transition-colors ${
+            error
+              ? "border-red-500 ring-2 ring-red-500/15 focus:border-red-600"
+              : "border-stone-300 focus:border-emerald-700"
+          }`}
+          {...props}
+        >
+          {children}
+        </select>
+        <ChevronDown
+          size={16}
+          className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-500"
+          aria-hidden="true"
+        />
+      </div>
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-red-700 font-medium flex items-center gap-1">
+          <AlertCircle size={13} className="shrink-0" aria-hidden="true" />
+          <span>{error}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -95,20 +181,25 @@ function FileField({
   onChange: (name: string, file: File | null) => void;
   required?: boolean;
 }) {
+  const inputId = useId();
   const [preview, setPreview] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("");
-  const MAX_SIZE = 1 * 1024 * 1024; // 1MB
+  const [fileError, setFileError] = useState<string>("");
+  const MAX_SIZE = 1 * 1024 * 1024;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (file && file.size > MAX_SIZE) {
-      alert(`Ukuran file "${file.name}" adalah ${(file.size / 1024 / 1024).toFixed(2)}MB, melebihi batas maksimal 1MB. Silakan pilih file yang lebih kecil atau kompres terlebih dahulu.`);
+      setFileError(
+        `Ukuran "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)} MB) melebihi batas 1 MB. Silakan pilih file yang lebih kecil.`
+      );
       e.target.value = "";
       onChange(name, null);
       setFileName("");
       setPreview(null);
       return;
     }
+    setFileError("");
     onChange(name, file);
     setFileName(file?.name || "");
     if (file && file.type.startsWith("image/")) {
@@ -121,29 +212,46 @@ function FileField({
   };
 
   return (
-    <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-gray-700">
-        {label} {required && <span className="text-red-500">*</span>}
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={inputId} className="text-sm font-semibold text-stone-800">
+        {label} {required && <span className="text-red-600" aria-hidden="true">*</span>}
       </label>
       <label
-        className="border-2 border-dashed rounded-xl p-4 flex flex-col items-center gap-2 cursor-pointer hover:border-green-500 transition-colors bg-gray-50/50 hover:bg-green-50/20"
-        style={{ borderColor: "#e0e0e0" }}
+        htmlFor={inputId}
+        className={`border-2 border-dashed rounded-2xl p-4 flex flex-col items-center gap-2 cursor-pointer transition-colors ${
+          fileError
+            ? "border-red-300 bg-red-50/40"
+            : fileName
+            ? "border-emerald-400 bg-emerald-50/30"
+            : "border-stone-300 bg-[#faf8f4] hover:border-emerald-600"
+        }`}
       >
         {preview ? (
-          <img src={preview} alt="preview" className="h-24 object-contain rounded-lg shadow-sm" />
+          <img src={preview} alt={`Pratinjau ${label}`} className="h-24 object-contain rounded-lg shadow-xs" />
         ) : (
-          <Upload size={24} className="text-gray-400" />
+          <Upload size={22} className="text-stone-400" aria-hidden="true" />
         )}
-        <span className="text-sm font-medium text-gray-700 text-center truncate max-w-full px-2">
-          {fileName || "Klik untuk memilih file"}
+        <span className="text-sm font-semibold text-stone-700 text-center truncate max-w-full px-2">
+          {fileName || "Klik untuk memilih berkas"}
         </span>
-        <span className="text-xs text-gray-400 font-medium">Format: JPG, PNG, PDF (Maksimal 1MB)</span>
-        <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleChange} />
+        <span className="text-xs text-stone-500">Format: JPG, PNG, PDF (Maks. 1 MB)</span>
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*,.pdf"
+          className="sr-only"
+          onChange={handleChange}
+        />
       </label>
+      {fileError && (
+        <p role="alert" className="text-xs text-red-700 font-medium flex items-start gap-1.5">
+          <AlertCircle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
+          <span>{fileError}</span>
+        </p>
+      )}
     </div>
   );
 }
-
 
 interface SuccessData {
   nomor: string;
@@ -158,15 +266,14 @@ interface SuccessData {
 function SuccessView({
   success,
   config,
-  primary,
-  accent,
+  theme,
 }: {
   success: SuccessData;
   config: Record<string, string>;
-  primary: string;
-  accent: string;
+  theme: PsbTheme;
 }) {
   const [copied, setCopied] = useState(false);
+
   const copyNomor = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(success.nomor);
@@ -181,15 +288,15 @@ function SuccessView({
 
   const waMessage = encodeURIComponent(
     `Assalamu'alaikum Admin PSB ${pesantren},\n\n` +
-    `Saya telah mendaftarkan calon santri baru secara online melalui website PSB dengan data berikut:\n\n` +
-    `📋 *No. Registrasi:* ${success.nomor}\n` +
-    `👤 *Nama Santri:* ${success.nama}\n` +
-    `🎓 *Jenjang Tujuan:* ${success.jenjang}\n` +
-    `🏷️ *Jalur Pendaftaran:* ${jalurLabel}\n` +
-    `🏫 *Asal Sekolah:* ${success.asalSekolah || "-"}\n` +
-    `👨‍👩‍👧 *Nama Wali:* ${success.namaWali}\n` +
-    `📱 *No. HP Wali:* ${success.noHpWali}\n\n` +
-    `Mohon konfirmasi penerimaan pendaftaran ini dan informasi jadwal seleksi berikutnya. Terima kasih.`
+      `Saya telah mendaftarkan calon santri baru secara online melalui website PSB dengan data berikut:\n\n` +
+      `📋 *No. Registrasi:* ${success.nomor}\n` +
+      `👤 *Nama Santri:* ${success.nama}\n` +
+      `🎓 *Jenjang Tujuan:* ${success.jenjang}\n` +
+      `🏷️ *Jalur Pendaftaran:* ${jalurLabel}\n` +
+      `🏫 *Asal Sekolah:* ${success.asalSekolah || "-"}\n` +
+      `👨‍👩‍👧 *Nama Wali:* ${success.namaWali}\n` +
+      `📱 *No. HP Wali:* ${success.noHpWali}\n\n` +
+      `Mohon konfirmasi penerimaan pendaftaran ini dan informasi jadwal seleksi berikutnya. Terima kasih.`
   );
 
   const waUrl = noWaAdmin
@@ -197,86 +304,97 @@ function SuccessView({
     : `https://wa.me/?text=${waMessage}`;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10" style={{ background: `linear-gradient(160deg, ${primary} 0%, #0a3315 100%)` }}>
-      <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "#dcfce7" }}>
-            <CheckCircle size={40} style={{ color: "#16a34a" }} />
+    <main
+      className="min-h-screen flex items-center justify-center px-4 py-10"
+      style={{ backgroundColor: theme.primaryDark }}
+    >
+      <div className="bg-white rounded-3xl p-7 sm:p-8 max-w-md w-full shadow-2xl border border-stone-200 space-y-6">
+        <div className="text-center space-y-2">
+          <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-3">
+            <CheckCircle2 size={34} aria-hidden="true" />
           </div>
-          <h2 className="text-2xl font-extrabold mb-1.5" style={{ color: primary }}>Pendaftaran Berhasil! 🎉</h2>
-          <p className="text-gray-500 text-sm">Data santri telah tersimpan di sistem kami.</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-bold" style={{ color: theme.primary }}>
+            Pendaftaran Berhasil
+          </h1>
+          <p className="text-stone-600 text-sm">
+            Data calon santri telah tersimpan di sistem {pesantren}.
+          </p>
         </div>
 
         {/* Nomor Registrasi */}
-        <div className="rounded-2xl p-4 mb-5 text-center" style={{ background: `${accent}12`, border: `2px solid ${accent}60` }}>
-          <p className="text-xs text-gray-500 font-medium mb-1">📋 Nomor Registrasi Anda</p>
-          <p className="text-2xl font-mono font-extrabold tracking-widest mb-2" style={{ color: primary }}>{success.nomor}</p>
+        <div
+          className="rounded-2xl p-4 text-center border-2"
+          style={{ backgroundColor: "#faf8f4", borderColor: theme.accent }}
+        >
+          <p className="text-xs text-stone-600 font-semibold inline-flex items-center gap-1.5 mb-1">
+            <ClipboardCheck size={14} style={{ color: theme.accentTextOnLight }} aria-hidden="true" />
+            <span>Nomor Registrasi Anda</span>
+          </p>
+          <p
+            className="text-2xl font-mono font-extrabold tracking-widest mb-2.5 tabular-nums"
+            style={{ color: theme.primary }}
+          >
+            {success.nomor}
+          </p>
           <button
             onClick={copyNomor}
             type="button"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
-            style={{ background: copied ? "#dcfce7" : "#f3f4f6", color: copied ? "#16a34a" : "#6b7280" }}
+            className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"
+            style={{
+              backgroundColor: copied ? "#dcfce7" : "#e7e5e4",
+              color: copied ? "#166534" : "#292524",
+            }}
           >
-            <Copy size={12} />
-            {copied ? "Tersalin!" : "Salin Nomor"}
+            <Copy size={12} aria-hidden="true" />
+            <span>{copied ? "Nomor Tersalin" : "Salin Nomor"}</span>
           </button>
         </div>
 
-        {/* Info Pendaftar Ringkas */}
-        <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3 mb-5 space-y-1.5 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-500">Nama Santri</span>
-            <span className="font-semibold text-gray-800">{success.nama}</span>
+        {/* Ringkasan */}
+        <dl className="rounded-2xl border border-stone-200 bg-[#faf8f4] px-4 py-3.5 space-y-2 text-sm">
+          <div className="flex justify-between gap-2">
+            <dt className="text-stone-500">Nama Santri</dt>
+            <dd className="font-bold text-stone-900 text-right">{success.nama}</dd>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Jenjang</span>
-            <span className="font-semibold text-gray-800">{success.jenjang}</span>
+          <div className="flex justify-between gap-2">
+            <dt className="text-stone-500">Jenjang</dt>
+            <dd className="font-bold text-stone-900">{success.jenjang}</dd>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-500">Jalur</span>
-            <span className="font-semibold text-gray-800">{success.jalur === "lksa" ? "Beasiswa LKSA (Gratis)" : "Reguler (MBS)"}</span>
+          <div className="flex justify-between gap-2">
+            <dt className="text-stone-500">Jalur</dt>
+            <dd className="font-bold text-stone-900 text-right">{jalurLabel}</dd>
           </div>
-        </div>
+        </dl>
 
-        {/* CTA WhatsApp - MAIN FEATURE */}
-        <div className="rounded-2xl p-4 mb-4" style={{ background: "linear-gradient(135deg, #dcfce7, #f0fdf4)", border: "1.5px solid #86efac" }}>
-          <p className="text-sm font-bold text-green-900 mb-1 flex items-center gap-1.5">
-            <MessageCircle size={16} className="text-green-600" />
-            Langkah Berikutnya — Wajib!
+        {/* CTA WhatsApp */}
+        <div className="rounded-2xl p-4 bg-emerald-50 border border-emerald-200 space-y-3">
+          <p className="text-sm font-bold text-emerald-950 flex items-center gap-1.5">
+            <MessageCircle size={16} className="text-emerald-700" aria-hidden="true" />
+            <span>Langkah Berikutnya — Konfirmasi Berkas</span>
           </p>
-          <p className="text-xs text-green-800 mb-3 leading-relaxed">
-            Konfirmasikan pendaftaran Anda ke Admin PSB via WhatsApp agar berkas segera diverifikasi dan Anda mendapat informasi jadwal seleksi.
+          <p className="text-xs text-emerald-900 leading-relaxed">
+            Kirim konfirmasi ke Admin PSB via WhatsApp agar berkas segera diverifikasi dan Anda menerima jadwal tes seleksi.
           </p>
           <a
             href={waUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2.5 py-3.5 px-5 rounded-xl font-bold text-white text-sm shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform"
-            style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
+            className="w-full flex items-center justify-center gap-2 py-3.5 px-5 rounded-xl font-bold text-white text-sm bg-emerald-700 hover:bg-emerald-800 transition-colors shadow-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 fill-white" viewBox="0 0 24 24">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-              <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.528 5.855L0 24l6.335-1.509A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.013-1.374l-.36-.213-3.756.894.937-3.648-.234-.376A9.818 9.818 0 1112 21.818z"/>
-            </svg>
-            Kirim Konfirmasi ke Admin PSB via WhatsApp
+            <MessageCircle size={17} aria-hidden="true" />
+            <span>Kirim Konfirmasi via WhatsApp</span>
           </a>
-          <p className="text-[11px] text-green-700 mt-2 text-center">Pesan sudah terisi otomatis dengan data Anda. Tinggal kirim!</p>
         </div>
 
-        {/* Back Button */}
         <Link
           href="/"
-          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm border border-stone-200 text-stone-700 hover:bg-stone-50 transition-colors"
         >
-          <ArrowLeft size={15} /> Kembali ke Beranda
+          <ArrowLeft size={15} aria-hidden="true" />
+          <span>Kembali ke Beranda</span>
         </Link>
-
-        <p className="text-center text-xs text-gray-400 mt-4 leading-relaxed">
-          Simpan nomor registrasi Anda. Panitia PSB akan menghubungi kembali untuk konfirmasi jadwal seleksi.
-        </p>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -287,55 +405,120 @@ function DaftarForm() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>(INITIAL);
   const [config, setConfig] = useState<Record<string, string>>({});
+  const [gelombangNama, setGelombangNama] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState<{
-    nomor: string;
-    nama: string;
-    jenjang: string;
-    jalur: string;
-    noHpWali: string;
-    namaWali: string;
-    asalSekolah: string;
-  } | null>(null);
+  const [success, setSuccess] = useState<SuccessData | null>(null);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [setujuSyarat, setSetujuSyarat] = useState(false);
   const [showSyaratModal, setShowSyaratModal] = useState(false);
+  const formCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/config").then(r => r.json()).then(d => { if (d.ok) setConfig(d.data); });
-  }, []);
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.ok) setConfig(d.data);
+      })
+      .catch(() => {});
 
-  const primary = config.warna_primer || "#0f4c1e";
-  const accent = config.warna_aksen || "#c8a84b";
+    if (gelombangId) {
+      fetch("/api/gelombang")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.ok && Array.isArray(d.data)) {
+            const found = d.data.find((g: { id: number; nama: string }) => String(g.id) === gelombangId);
+            if (found?.nama) setGelombangNama(String(found.nama));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [gelombangId]);
+
+  const theme = buildPsbTheme(config);
 
   const syaratList = config.syarat_ketentuan
-    ? config.syarat_ketentuan.split("\n").map(s => s.trim()).filter(Boolean)
+    ? config.syarat_ketentuan.split("\n").map((s) => s.trim()).filter(Boolean)
     : DEFAULT_SYARAT;
 
-  const set = (key: string, val: string) => setForm(prev => ({ ...prev, [key]: val }));
-  const setFile = (key: string, file: File | null) => setForm(prev => ({ ...prev, [key]: file }));
-
-  const validate = () => {
-    if (step === 1) {
-      if (!form.nama_lengkap) { setError("Nama lengkap wajib diisi."); return false; }
-      if (!form.jenis_kelamin) { setError("Jenis kelamin wajib dipilih."); return false; }
-    }
-    if (step === 3 && !form.no_hp_wali) { setError("No HP / WhatsApp wali wajib diisi."); return false; }
-    if (step === 4) {
-      if (form.jalur_pendaftaran === "lksa" && !form.sktm) {
-        setError("Calon pendaftar jalur Beasiswa LKSA wajib mengunggah Surat Keterangan Tidak Mampu (SKTM).");
-        return false;
-      }
-      if (!setujuSyarat) {
-        setError("Anda wajib mencentang persetujuan Syarat & Ketentuan pendaftaran sebelum mengirim formulir.");
-        return false;
-      }
-    }
-    setError(""); return true;
+  const set = (key: string, val: string) => {
+    setForm((prev) => ({ ...prev, [key]: val }));
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+  const setFile = (key: string, file: File | null) => {
+    setForm((prev) => ({ ...prev, [key]: file }));
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
-  const nextStep = () => { if (validate()) setStep(s => Math.min(s + 1, 4)); };
-  const prevStep = () => setStep(s => Math.max(s - 1, 1));
+  const scrollToFirstInvalid = () => {
+    window.requestAnimationFrame(() => {
+      const container = formCardRef.current;
+      if (!container) return;
+      const firstInvalid = container.querySelector<HTMLElement>('[data-invalid="true"]');
+      if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstInvalid.focus({ preventScroll: true });
+      } else {
+        container.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  };
+
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+
+    if (step === 1) {
+      if (!String(form.nama_lengkap || "").trim()) {
+        nextErrors.nama_lengkap = "Nama lengkap calon santri wajib diisi.";
+      }
+      if (!form.jenis_kelamin) {
+        nextErrors.jenis_kelamin = "Jenis kelamin wajib dipilih.";
+      }
+    }
+    if (step === 3 && !String(form.no_hp_wali || "").trim()) {
+      nextErrors.no_hp_wali = "Nomor WhatsApp / HP orang tua atau wali wajib diisi.";
+    }
+    if (step === 4) {
+      if (form.jalur_pendaftaran === "lksa" && !form.sktm) {
+        nextErrors.sktm = "Jalur Beasiswa LKSA wajib melampirkan Surat Keterangan Tidak Mampu (SKTM).";
+      }
+      if (!setujuSyarat) {
+        nextErrors.setujuSyarat =
+          "Silakan centang persetujuan Syarat & Ketentuan pendaftaran sebelum mengirim formulir.";
+      }
+    }
+
+    const keys = Object.keys(nextErrors);
+    if (keys.length > 0) {
+      setFieldErrors(nextErrors);
+      setError(nextErrors[keys[0]]);
+      scrollToFirstInvalid();
+      return false;
+    }
+
+    setFieldErrors({});
+    setError("");
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validate()) setStep((s) => Math.min(s + 1, 4));
+  };
+  const prevStep = () => {
+    setFieldErrors({});
+    setError("");
+    setStep((s) => Math.max(s - 1, 1));
+  };
 
   const uploadFile = async (file: File, folder: string): Promise<string> => {
     const formData = new FormData();
@@ -359,7 +542,6 @@ function DaftarForm() {
       }
       if (gelombangId) payload.gelombang_id = Number(gelombangId);
 
-      // Upload berkas dokumen (maks. 1MB per file)
       if (form.foto instanceof File) payload.foto_url = await uploadFile(form.foto, "foto");
       if (form.kk instanceof File) payload.kk_url = await uploadFile(form.kk, "kk");
       if (form.akta instanceof File) payload.akta_url = await uploadFile(form.akta, "akta");
@@ -368,7 +550,7 @@ function DaftarForm() {
       const res = await fetch("/api/psb", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
@@ -389,80 +571,150 @@ function DaftarForm() {
   };
 
   if (success) {
-    return <SuccessView success={success} config={config} primary={primary} accent={accent} />;
+    return <SuccessView success={success} config={config} theme={theme} />;
   }
 
   return (
-    <div className="min-h-screen" style={{ background: `linear-gradient(160deg, ${primary} 0%, #0a3315 40%, #f8f9fa 40%)` }}>
-      {/* Navbar mini */}
-      <nav className="px-6 py-4 flex items-center justify-between" style={{ background: `${primary}f0` }}>
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-white/70 hover:text-white flex items-center gap-2 text-sm">
-            <ArrowLeft size={16} /> Beranda
-          </Link>
-          <span className="text-white/30">|</span>
-          <span className="text-white text-sm font-semibold">Formulir Pendaftaran Santri Baru</span>
+    <div className="min-h-screen flex flex-col bg-[#faf8f4]">
+      {/* Header Bar */}
+      <header className="sticky top-0 z-30 border-b border-black/15 shadow-sm text-white" style={{ backgroundColor: theme.primaryDark }}>
+        <div className="max-w-3xl mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-white/85 hover:text-white transition-colors shrink-0"
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              <span>Beranda</span>
+            </Link>
+            <span className="text-white/25" aria-hidden="true">|</span>
+            <h1 className="text-sm font-bold truncate">Formulir PSB Online</h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowSyaratModal(true)}
+            className="text-xs font-semibold px-3 py-1.5 rounded-full inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white shrink-0 cursor-pointer transition-colors"
+          >
+            <FileCheck size={14} style={{ color: theme.accentLight }} aria-hidden="true" />
+            <span>Syarat</span>
+          </button>
         </div>
-        <button
-          onClick={() => setShowSyaratModal(true)}
-          className="text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all text-white bg-white/10 hover:bg-white/20 border border-white/20"
-        >
-          <FileCheck size={14} style={{ color: accent }} />
-          <span>Syarat & Ketentuan</span>
-        </button>
-      </nav>
+      </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Progress Steps */}
-        <div className="flex items-center justify-between mb-6">
-          {STEPS.map((s, idx) => {
-            const Icon = s.icon;
-            const active = s.id === step;
-            const done = s.id < step;
-            return (
-              <div key={s.id} className="flex items-center flex-1">
-                <div className="flex flex-col items-center gap-1">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all"
-                    style={{
-                      background: done ? "#16a34a" : active ? `linear-gradient(135deg, ${accent}, #f0d080)` : "rgba(255,255,255,0.15)",
-                      color: done || active ? (active ? primary : "white") : "rgba(255,255,255,0.5)",
-                      boxShadow: active ? `0 4px 15px ${accent}50` : "none",
-                    }}
-                  >
-                    {done ? <CheckCircle size={18} /> : <Icon size={16} />}
-                  </div>
-                  <span className="text-xs font-medium hidden sm:block text-center" style={{ color: active ? accent : "rgba(255,255,255,0.6)" }}>
-                    {s.label}
-                  </span>
-                </div>
-                {idx < STEPS.length - 1 && (
-                  <div className="flex-1 h-0.5 mx-2" style={{ background: done ? "#16a34a" : "rgba(255,255,255,0.2)" }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Form Card */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-          <div className="p-1.5" style={{ background: `linear-gradient(90deg, ${primary}, ${accent}, ${primary})` }} />
-          <div className="p-6 sm:p-8">
-            <div className="flex items-center justify-between mb-1">
-              <h2 className="text-xl font-bold" style={{ color: primary }}>
-                {STEPS[step - 1].label}
-              </h2>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
-                Langkah {step} dari {STEPS.length}
+      {/* Main Form Container */}
+      <main className="flex-1 w-full max-w-3xl mx-auto px-4 py-8 sm:py-10 space-y-6">
+        {/* Banner Gelombang Terpilih */}
+        {gelombangId && (
+          <div
+            className="rounded-2xl px-4 py-3 border flex items-center justify-between gap-3 bg-white"
+            style={{ borderColor: `${theme.accent}80` }}
+          >
+            <div className="flex items-center gap-2.5 text-sm">
+              <Calendar size={16} style={{ color: theme.accentTextOnLight }} aria-hidden="true" />
+              <span className="text-stone-700">
+                Jalur Gelombang:{" "}
+                <strong className="text-stone-900">
+                  {gelombangNama || `Gelombang #${gelombangId}`}
+                </strong>
               </span>
             </div>
-            <p className="text-gray-400 text-xs mb-6">
-              Pastikan seluruh informasi diisi dengan teliti dan sesuai dengan data resmi.
-            </p>
+            <Link
+              href="/daftar"
+              className="text-xs font-semibold text-stone-500 hover:text-stone-800 underline shrink-0"
+            >
+              Ubah
+            </Link>
+          </div>
+        )}
+
+        {/* Stepper */}
+        <nav aria-label="Tahapan pendaftaran" className="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200/80 shadow-xs">
+          <ol className="relative grid grid-cols-4 gap-2">
+            {/* Garis penghubung horizontal antar langkah */}
+            <div
+              aria-hidden="true"
+              className="absolute top-5 left-[12.5%] right-[12.5%] h-0.5 bg-stone-200"
+            >
+              <div
+                className="h-full transition-all duration-300"
+                style={{
+                  width: `${((step - 1) / (STEPS.length - 1)) * 100}%`,
+                  backgroundColor: "#15803d",
+                }}
+              />
+            </div>
+
+            {STEPS.map((s) => {
+              const Icon = s.icon;
+              const active = s.id === step;
+              const done = s.id < step;
+              const canJump = done;
+
+              return (
+                <li key={s.id} className="relative z-10 flex flex-col items-center text-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={!canJump}
+                    onClick={() => canJump && setStep(s.id)}
+                    aria-label={`Langkah ${s.id}: ${s.label}`}
+                    aria-current={active ? "step" : undefined}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors ring-4 ring-white ${
+                      canJump ? "cursor-pointer" : "cursor-default"
+                    }`}
+                    style={{
+                      backgroundColor: done
+                        ? "#15803d"
+                        : active
+                        ? theme.accent
+                        : "#f5f5f4",
+                      color: done ? "#ffffff" : active ? theme.onAccent : "#78716c",
+                    }}
+                  >
+                    {done ? <CheckCircle2 size={18} aria-hidden="true" /> : <Icon size={16} aria-hidden="true" />}
+                  </button>
+                  <span
+                    className="text-[11px] sm:text-xs font-semibold leading-tight"
+                    style={{
+                      color: active ? theme.primary : done ? "#15803d" : "#78716c",
+                    }}
+                  >
+                    <span className="sm:hidden">{s.shortLabel}</span>
+                    <span className="hidden sm:inline">{s.label}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        {/* Form Card */}
+        <div ref={formCardRef} className="bg-white rounded-3xl shadow-sm border border-stone-200/90 overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="h-1.5 w-full"
+            style={{ background: `linear-gradient(90deg, ${theme.primary}, ${theme.accent})` }}
+          />
+          <div className="p-6 sm:p-8 space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-stone-100">
+              <div>
+                <h2 className="font-display text-2xl font-bold" style={{ color: theme.primary }}>
+                  {STEPS[step - 1].label}
+                </h2>
+                <p className="text-stone-500 text-xs sm:text-sm mt-0.5">
+                  Pastikan seluruh data diisi sesuai dokumen resmi kependudukan.
+                </p>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-stone-100 text-stone-700 tabular-nums">
+                Langkah {step} / {STEPS.length}
+              </span>
+            </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-5 flex items-center gap-2">
-                <AlertCircle size={18} className="shrink-0 text-red-600" />
+              <div
+                role="alert"
+                className="bg-red-50 border border-red-200 text-red-800 text-sm rounded-2xl px-4 py-3 flex items-start gap-2.5"
+              >
+                <AlertCircle size={18} className="shrink-0 text-red-600 mt-0.5" aria-hidden="true" />
                 <span>{error}</span>
               </div>
             )}
@@ -470,19 +722,17 @@ function DaftarForm() {
             {/* Step 1: Jalur & Biodata */}
             {step === 1 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Bagian Pilihan Jalur dan Jenjang Sekolah Formal */}
-                <div className="sm:col-span-2 bg-gradient-to-br from-green-50/80 to-emerald-50/30 p-4 sm:p-5 rounded-2xl border border-green-200/80 space-y-4">
-                  {/* Pilihan Jalur */}
-                  <div>
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-green-950 block mb-2">
-                      Pilih Jalur Pendaftaran <span className="text-red-500">*</span>
-                    </label>
+                <div className="sm:col-span-2 bg-[#faf8f4] p-4 sm:p-5 rounded-2xl border border-stone-200/80 space-y-5">
+                  <fieldset>
+                    <legend className="text-xs font-extrabold uppercase tracking-wider text-stone-700 mb-2.5">
+                      Pilih Jalur Pendaftaran <span className="text-red-600" aria-hidden="true">*</span>
+                    </legend>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <label
-                        className={`flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                        className={`flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-colors bg-white ${
                           form.jalur_pendaftaran === "reguler"
-                            ? "border-green-600 bg-white shadow-sm ring-2 ring-green-600/20"
-                            : "border-gray-200 bg-white/70 hover:bg-white"
+                            ? "border-emerald-700 ring-2 ring-emerald-700/15"
+                            : "border-stone-200 hover:border-stone-300"
                         }`}
                       >
                         <input
@@ -491,19 +741,21 @@ function DaftarForm() {
                           value="reguler"
                           checked={form.jalur_pendaftaran === "reguler"}
                           onChange={() => set("jalur_pendaftaran", "reguler")}
-                          className="mt-1 text-green-700 focus:ring-green-600"
+                          className="mt-1 accent-emerald-700"
                         />
                         <div>
-                          <div className="text-sm font-bold text-gray-900">Santri Reguler (MBS)</div>
-                          <p className="text-xs text-gray-500 mt-0.5">Muhammadiyah Boarding School reguler berasrama</p>
+                          <div className="text-sm font-bold text-stone-900">Santri Reguler (MBS)</div>
+                          <p className="text-xs text-stone-600 mt-0.5">
+                            Muhammadiyah Boarding School reguler berasrama
+                          </p>
                         </div>
                       </label>
 
                       <label
-                        className={`flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                        className={`flex items-start gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-colors bg-white ${
                           form.jalur_pendaftaran === "lksa"
-                            ? "border-amber-600 bg-white shadow-sm ring-2 ring-amber-600/20"
-                            : "border-gray-200 bg-white/70 hover:bg-white"
+                            ? "border-amber-600 ring-2 ring-amber-600/15"
+                            : "border-stone-200 hover:border-stone-300"
                         }`}
                       >
                         <input
@@ -512,30 +764,37 @@ function DaftarForm() {
                           value="lksa"
                           checked={form.jalur_pendaftaran === "lksa"}
                           onChange={() => set("jalur_pendaftaran", "lksa")}
-                          className="mt-1 text-amber-600 focus:ring-amber-500"
+                          className="mt-1 accent-amber-600"
                         />
                         <div>
-                          <div className="text-sm font-bold text-amber-950 flex items-center gap-1.5">
+                          <div className="text-sm font-bold text-stone-900 flex items-center gap-1.5 flex-wrap">
                             <span>Santri LKSA (Gratis)</span>
-                            <span className="text-[10px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.5 rounded">Beasiswa</span>
+                            <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full">
+                              Beasiswa
+                            </span>
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5">Khusus yatim / piatu / dhuafa asuhan LKSA</p>
+                          <p className="text-xs text-stone-600 mt-0.5">
+                            Khusus yatim / piatu / dhuafa asuhan LKSA
+                          </p>
                         </div>
                       </label>
                     </div>
 
                     {form.jalur_pendaftaran === "lksa" && (
-                      <div className="text-xs text-amber-900 mt-2.5 bg-amber-50 p-2.5 rounded-xl border border-amber-200 leading-relaxed">
-                        ℹ️ <strong>Syarat Khusus LKSA:</strong> Pendaftar jalur ini bebas biaya dan wajib melampirkan berkas <strong>Surat Keterangan Tidak Mampu (SKTM)</strong> atau Surat Keterangan Yatim/Kematian Orang Tua pada langkah ke-4 (Dokumen).
+                      <div className="text-xs text-amber-950 mt-3 bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-start gap-2 leading-relaxed">
+                        <Info size={15} className="shrink-0 mt-0.5 text-amber-700" aria-hidden="true" />
+                        <span>
+                          <strong>Syarat Khusus LKSA:</strong> Pendaftar jalur ini bebas biaya dan wajib melampirkan{" "}
+                          <strong>Surat Keterangan Tidak Mampu (SKTM)</strong> atau Surat Keterangan Yatim/Kematian Orang Tua pada langkah ke-4.
+                        </span>
                       </div>
                     )}
-                  </div>
+                  </fieldset>
 
-                  {/* Pilihan Jenjang Formal */}
-                  <div>
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-green-950 block mb-2">
-                      Jenjang Sekolah Formal yang Dituju <span className="text-red-500">*</span>
-                    </label>
+                  <fieldset>
+                    <legend className="text-xs font-extrabold uppercase tracking-wider text-stone-700 mb-2.5">
+                      Jenjang Sekolah Formal <span className="text-red-600" aria-hidden="true">*</span>
+                    </legend>
                     <div className="grid grid-cols-3 gap-2.5">
                       {[
                         { val: "SMP", label: "SMP", desc: "SMP Muhammadiyah" },
@@ -544,10 +803,10 @@ function DaftarForm() {
                       ].map((item) => (
                         <label
                           key={item.val}
-                          className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-all text-center ${
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 cursor-pointer transition-colors text-center bg-white ${
                             form.jenjang_tujuan === item.val
-                              ? "border-green-600 bg-white shadow-sm ring-2 ring-green-600/20"
-                              : "border-gray-200 bg-white/70 hover:bg-white"
+                              ? "border-emerald-700 ring-2 ring-emerald-700/15"
+                              : "border-stone-200 hover:border-stone-300"
                           }`}
                         >
                           <input
@@ -558,27 +817,72 @@ function DaftarForm() {
                             onChange={() => set("jenjang_tujuan", item.val)}
                             className="sr-only"
                           />
-                          <span className="text-base font-extrabold text-gray-900">{item.label}</span>
-                          <span className="text-[11px] text-gray-500 mt-0.5 hidden sm:block">{item.desc}</span>
+                          <span className="text-base font-extrabold text-stone-900">{item.label}</span>
+                          <span className="text-[11px] text-stone-500 mt-0.5 hidden sm:block">
+                            {item.desc}
+                          </span>
                         </label>
                       ))}
                     </div>
-                  </div>
+                  </fieldset>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <InputField label="Nama Lengkap" required value={String(form.nama_lengkap)} onChange={e => set("nama_lengkap", e.target.value)} placeholder="Nama lengkap sesuai akta kelahiran" />
+                  <InputField
+                    label="Nama Lengkap"
+                    required
+                    autoComplete="name"
+                    error={fieldErrors.nama_lengkap}
+                    value={String(form.nama_lengkap)}
+                    onChange={(e) => set("nama_lengkap", e.target.value)}
+                    placeholder="Nama lengkap sesuai akta kelahiran"
+                  />
                 </div>
-                <InputField label="Nama Panggilan" value={String(form.nama_panggilan)} onChange={e => set("nama_panggilan", e.target.value)} placeholder="Nama panggilan" />
-                <SelectField label="Jenis Kelamin" required value={String(form.jenis_kelamin)} onChange={e => set("jenis_kelamin", e.target.value)}>
+                <InputField
+                  label="Nama Panggilan"
+                  value={String(form.nama_panggilan)}
+                  onChange={(e) => set("nama_panggilan", e.target.value)}
+                  placeholder="Nama panggilan"
+                />
+                <SelectField
+                  label="Jenis Kelamin"
+                  required
+                  error={fieldErrors.jenis_kelamin}
+                  value={String(form.jenis_kelamin)}
+                  onChange={(e) => set("jenis_kelamin", e.target.value)}
+                >
                   <option value="">-- Pilih Jenis Kelamin --</option>
                   <option value="L">Laki-laki</option>
                   <option value="P">Perempuan</option>
                 </SelectField>
-                <InputField label="Tempat Lahir" value={String(form.tempat_lahir)} onChange={e => set("tempat_lahir", e.target.value)} placeholder="Kota tempat lahir" />
-                <InputField label="Tanggal Lahir" type="date" value={String(form.tanggal_lahir)} onChange={e => set("tanggal_lahir", e.target.value)} />
-                <InputField label="Anak ke-" type="number" value={String(form.anak_ke)} onChange={e => set("anak_ke", e.target.value)} placeholder="1" min="1" />
-                <InputField label="Jumlah Saudara" type="number" value={String(form.jumlah_saudara)} onChange={e => set("jumlah_saudara", e.target.value)} placeholder="0" min="0" />
+                <InputField
+                  label="Tempat Lahir"
+                  value={String(form.tempat_lahir)}
+                  onChange={(e) => set("tempat_lahir", e.target.value)}
+                  placeholder="Kota tempat lahir"
+                />
+                <InputField
+                  label="Tanggal Lahir"
+                  type="date"
+                  value={String(form.tanggal_lahir)}
+                  onChange={(e) => set("tanggal_lahir", e.target.value)}
+                />
+                <InputField
+                  label="Anak ke-"
+                  type="number"
+                  value={String(form.anak_ke)}
+                  onChange={(e) => set("anak_ke", e.target.value)}
+                  placeholder="1"
+                  min="1"
+                />
+                <InputField
+                  label="Jumlah Saudara"
+                  type="number"
+                  value={String(form.jumlah_saudara)}
+                  onChange={(e) => set("jumlah_saudara", e.target.value)}
+                  placeholder="0"
+                  min="0"
+                />
               </div>
             )}
 
@@ -586,47 +890,133 @@ function DaftarForm() {
             {step === 2 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <InputField label="Asal Sekolah Sebelumnya" value={String(form.asal_sekolah)} onChange={e => set("asal_sekolah", e.target.value)} placeholder="Contoh: SD Negeri 1 Bangsri / MTs ..." />
+                  <InputField
+                    label="Asal Sekolah Sebelumnya"
+                    value={String(form.asal_sekolah)}
+                    onChange={(e) => set("asal_sekolah", e.target.value)}
+                    placeholder="Contoh: SD Negeri 1 Bangsri / MTs ..."
+                  />
                 </div>
-                <InputField label="Peminatan / Jurusan (jika SMA/SMK)" value={String(form.jurusan)} onChange={e => set("jurusan", e.target.value)} placeholder="Contoh: IPA / IPS / TKJ / Umum" />
-                <InputField label="Tahun Lulus" type="number" value={String(form.tahun_lulus)} onChange={e => set("tahun_lulus", e.target.value)} placeholder="2025" />
+                <InputField
+                  label="Peminatan / Jurusan (jika SMA/SMK)"
+                  value={String(form.jurusan)}
+                  onChange={(e) => set("jurusan", e.target.value)}
+                  placeholder="Contoh: IPA / IPS / TKJ / Umum"
+                />
+                <InputField
+                  label="Tahun Lulus"
+                  type="number"
+                  value={String(form.tahun_lulus)}
+                  onChange={(e) => set("tahun_lulus", e.target.value)}
+                  placeholder="2026"
+                />
                 <div className="sm:col-span-2">
-                  <InputField label="Alamat Lengkap" value={String(form.alamat)} onChange={e => set("alamat", e.target.value)} placeholder="Nama jalan, RT/RW, Dusun" />
+                  <InputField
+                    label="Alamat Lengkap"
+                    autoComplete="street-address"
+                    value={String(form.alamat)}
+                    onChange={(e) => set("alamat", e.target.value)}
+                    placeholder="Nama jalan, dusun, atau perumahan"
+                  />
                 </div>
-                <InputField label="RT / RW" value={String(form.rt_rw)} onChange={e => set("rt_rw", e.target.value)} placeholder="001/002" />
-                <InputField label="Kelurahan / Desa" value={String(form.kelurahan)} onChange={e => set("kelurahan", e.target.value)} />
-                <InputField label="Kecamatan" value={String(form.kecamatan)} onChange={e => set("kecamatan", e.target.value)} />
-                <InputField label="Kabupaten / Kota" value={String(form.kabupaten)} onChange={e => set("kabupaten", e.target.value)} />
-                <SelectField label="Provinsi" value={String(form.provinsi)} onChange={e => set("provinsi", e.target.value)}>
+                <InputField
+                  label="RT / RW"
+                  value={String(form.rt_rw)}
+                  onChange={(e) => set("rt_rw", e.target.value)}
+                  placeholder="001/002"
+                />
+                <InputField
+                  label="Kelurahan / Desa"
+                  value={String(form.kelurahan)}
+                  onChange={(e) => set("kelurahan", e.target.value)}
+                />
+                <InputField
+                  label="Kecamatan"
+                  value={String(form.kecamatan)}
+                  onChange={(e) => set("kecamatan", e.target.value)}
+                />
+                <InputField
+                  label="Kabupaten / Kota"
+                  autoComplete="address-level2"
+                  value={String(form.kabupaten)}
+                  onChange={(e) => set("kabupaten", e.target.value)}
+                />
+                <SelectField
+                  label="Provinsi"
+                  value={String(form.provinsi)}
+                  onChange={(e) => set("provinsi", e.target.value)}
+                >
                   <option value="">-- Pilih Provinsi --</option>
-                  {PROVINSI.map(p => <option key={p} value={p}>{p}</option>)}
+                  {PROVINSI.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
                 </SelectField>
-                <InputField label="Kode Pos" value={String(form.kode_pos)} onChange={e => set("kode_pos", e.target.value)} placeholder="12345" />
+                <InputField
+                  label="Kode Pos"
+                  autoComplete="postal-code"
+                  value={String(form.kode_pos)}
+                  onChange={(e) => set("kode_pos", e.target.value)}
+                  placeholder="59453"
+                />
               </div>
             )}
 
             {/* Step 3: Orang Tua / Wali */}
             {step === 3 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField label="Nama Ayah" value={String(form.nama_ayah)} onChange={e => set("nama_ayah", e.target.value)} />
-                <InputField label="Pekerjaan Ayah" value={String(form.pekerjaan_ayah)} onChange={e => set("pekerjaan_ayah", e.target.value)} />
-                <InputField label="Nama Ibu" value={String(form.nama_ibu)} onChange={e => set("nama_ibu", e.target.value)} />
-                <InputField label="Pekerjaan Ibu" value={String(form.pekerjaan_ibu)} onChange={e => set("pekerjaan_ibu", e.target.value)} />
+                <InputField
+                  label="Nama Ayah"
+                  value={String(form.nama_ayah)}
+                  onChange={(e) => set("nama_ayah", e.target.value)}
+                />
+                <InputField
+                  label="Pekerjaan Ayah"
+                  value={String(form.pekerjaan_ayah)}
+                  onChange={(e) => set("pekerjaan_ayah", e.target.value)}
+                />
+                <InputField
+                  label="Nama Ibu"
+                  value={String(form.nama_ibu)}
+                  onChange={(e) => set("nama_ibu", e.target.value)}
+                />
+                <InputField
+                  label="Pekerjaan Ibu"
+                  value={String(form.pekerjaan_ibu)}
+                  onChange={(e) => set("pekerjaan_ibu", e.target.value)}
+                />
                 <div className="sm:col-span-2">
                   <InputField
-                    label="Rata-rata Gaji / Penghasilan Orang Tua (Per Bulan)"
+                    label="Rata-rata Penghasilan Orang Tua (Per Bulan)"
                     value={String(form.penghasilan_orang_tua || "")}
-                    onChange={e => set("penghasilan_orang_tua", e.target.value)}
-                    placeholder="Contoh: Rp 2.500.000 atau 3.000.000"
+                    onChange={(e) => set("penghasilan_orang_tua", e.target.value)}
+                    placeholder="Contoh: Rp 2.500.000"
+                    hint="Tuliskan kisaran penghasilan gabungan per bulan."
                   />
-                  <p className="text-[11px] text-gray-500 mt-1">Ketik rata-rata gaji atau penghasilan per bulan (bebas ketik angka / nominal).</p>
                 </div>
                 <div className="sm:col-span-2">
-                  <InputField label="No. WhatsApp / HP Orang Tua/Wali" required type="tel" value={String(form.no_hp_wali)} onChange={e => set("no_hp_wali", e.target.value)} placeholder="08xxxxxxxxxx" />
-                  <p className="text-[11px] text-gray-500 mt-1">Nomor ini akan digunakan untuk mengirimkan informasi tes dan kelulusan.</p>
+                  <InputField
+                    label="No. WhatsApp / HP Orang Tua/Wali"
+                    required
+                    type="tel"
+                    autoComplete="tel"
+                    error={fieldErrors.no_hp_wali}
+                    value={String(form.no_hp_wali)}
+                    onChange={(e) => set("no_hp_wali", e.target.value)}
+                    placeholder="08xxxxxxxxxx"
+                    hint="Nomor aktif untuk menerima informasi verifikasi berkas dan jadwal seleksi."
+                  />
                 </div>
                 <div className="sm:col-span-2">
-                  <InputField label="Email Orang Tua/Wali (opsional)" type="email" value={String(form.email_wali)} onChange={e => set("email_wali", e.target.value)} placeholder="contoh@gmail.com" />
+                  <InputField
+                    label="Email Orang Tua/Wali (opsional)"
+                    type="email"
+                    autoComplete="email"
+                    value={String(form.email_wali)}
+                    onChange={(e) => set("email_wali", e.target.value)}
+                    placeholder="contoh@gmail.com"
+                  />
                 </div>
               </div>
             )}
@@ -634,19 +1024,18 @@ function DaftarForm() {
             {/* Step 4: Dokumen & Syarat Ketentuan */}
             {step === 4 && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2">
                     <FileField label="Pas Foto Santri (3x4)" name="foto" onChange={setFile} required />
                   </div>
                   <FileField label="Kartu Keluarga (KK)" name="kk" onChange={setFile} />
                   <FileField label="Akta Kelahiran" name="akta" onChange={setFile} />
 
-                  {/* Upload Khusus Santri LKSA */}
                   {form.jalur_pendaftaran === "lksa" && (
-                    <div className="sm:col-span-2 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-2">
-                      <div className="flex items-center gap-1.5 text-amber-900 font-bold text-sm">
-                        <AlertCircle size={16} className="text-amber-700" />
-                        <span>Berkas Wajib untuk Jalur Santri LKSA (Gratis):</span>
+                    <div className="sm:col-span-2 p-4 rounded-2xl bg-amber-50 border border-amber-300 space-y-2.5">
+                      <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
+                        <AlertCircle size={16} className="text-amber-700 shrink-0" aria-hidden="true" />
+                        <span>Berkas Wajib Jalur Beasiswa LKSA</span>
                       </div>
                       <FileField
                         label="Surat Keterangan Tidak Mampu (SKTM) / Keterangan Yatim"
@@ -654,119 +1043,187 @@ function DaftarForm() {
                         onChange={setFile}
                         required
                       />
-                      <p className="text-xs text-amber-700 leading-relaxed">
-                        Lampirkan scan / foto Surat Keterangan Tidak Mampu dari Kelurahan/Desa atau Surat Keterangan Kematian Orang Tua (maksimal 1MB).
-                      </p>
                     </div>
                   )}
                 </div>
 
-                {/* Kotak Syarat & Ketentuan Pendaftaran */}
-                <div className="p-4 sm:p-5 rounded-2xl border border-gray-200 bg-gray-50/70 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <FileCheck size={18} style={{ color: primary }} />
-                    <h3 className="font-bold text-sm text-gray-900">Syarat & Ketentuan Pendaftaran</h3>
+                {/* Syarat & Ketentuan */}
+                <div className="p-4 sm:p-5 rounded-2xl border border-stone-200 bg-[#faf8f4] space-y-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <FileCheck size={18} style={{ color: theme.primary }} aria-hidden="true" />
+                      <h3 className="font-bold text-sm text-stone-900">Syarat &amp; Ketentuan Pendaftaran</h3>
+                    </div>
+                    <span className="text-[11px] font-semibold text-stone-500 tabular-nums">
+                      {syaratList.length} poin (gulir ke bawah)
+                    </span>
                   </div>
 
-                  <div className="max-h-48 overflow-y-auto pr-2 space-y-2 text-xs text-gray-600 bg-white p-3.5 rounded-xl border border-gray-100 leading-relaxed">
+                  <ol className="max-h-52 overflow-y-scroll [scrollbar-width:thin] pr-2 space-y-2 text-xs text-stone-700 bg-white p-3.5 rounded-xl border border-stone-200/70 leading-relaxed">
                     {syaratList.map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-2">
-                        <span className="font-bold text-green-800 shrink-0">{idx + 1}.</span>
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="font-bold tabular-nums shrink-0" style={{ color: theme.primary }}>
+                          {idx + 1}.
+                        </span>
                         <span>{item.replace(/^\d+[\.\)]\s*/, "")}</span>
-                      </div>
+                      </li>
                     ))}
-                  </div>
+                  </ol>
 
-                  <label className="flex items-start gap-3 p-3 rounded-xl border border-green-200 bg-green-50/60 cursor-pointer hover:bg-green-50 transition-colors">
+                  <label
+                    className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
+                      fieldErrors.setujuSyarat
+                        ? "border-red-400 bg-red-50/70"
+                        : "border-emerald-200 bg-emerald-50/70 hover:bg-emerald-50"
+                    }`}
+                  >
                     <input
                       type="checkbox"
                       checked={setujuSyarat}
-                      onChange={(e) => setSetujuSyarat(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 text-green-700 rounded focus:ring-green-600 cursor-pointer shrink-0"
+                      data-invalid={fieldErrors.setujuSyarat ? "true" : undefined}
+                      onChange={(e) => {
+                        setSetujuSyarat(e.target.checked);
+                        if (e.target.checked) {
+                          setFieldErrors((prev) => {
+                            if (!prev.setujuSyarat) return prev;
+                            const next = { ...prev };
+                            delete next.setujuSyarat;
+                            return next;
+                          });
+                        }
+                      }}
+                      className="mt-0.5 w-4 h-4 accent-emerald-700 rounded cursor-pointer shrink-0"
                     />
-                    <span className="text-xs text-green-950 font-medium leading-relaxed">
-                      Saya menyatakan bahwa seluruh data yang diisi adalah benar, dokumen yang dilampirkan adalah sah, dan saya bersedia menaati seluruh <strong>Syarat, Ketentuan, serta Tata Tertib</strong> pondok pesantren.
+                    <span className="text-xs text-emerald-950 font-medium leading-relaxed">
+                      Saya menyatakan seluruh data yang diisi adalah benar, dokumen yang dilampirkan sah, dan bersedia menaati{" "}
+                      <strong>Syarat, Ketentuan, serta Tata Tertib</strong> pondok pesantren.
                     </span>
                   </label>
+                  {fieldErrors.setujuSyarat && (
+                    <p role="alert" className="text-xs text-red-700 font-medium flex items-center gap-1">
+                      <AlertCircle size={13} className="shrink-0" aria-hidden="true" />
+                      <span>{fieldErrors.setujuSyarat}</span>
+                    </p>
+                  )}
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Navigation */}
-          <div className="px-6 sm:px-8 pb-8 flex items-center justify-between gap-4">
-            {step > 1 ? (
-              <button onClick={prevStep} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border font-medium text-sm transition-all hover:bg-gray-50" style={{ borderColor: "#e0e0e0" }}>
-                <ArrowLeft size={16} /> Sebelumnya
-              </button>
-            ) : (
-              <div />
-            )}
-            {step < 4 ? (
-              <button onClick={nextStep} className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90" style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)`, color: "white" }}>
-                Lanjut <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button onClick={submit} disabled={submitting} className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-95 disabled:opacity-60 shadow-md" style={{ background: `linear-gradient(135deg, ${accent}, #f0d080)`, color: primary }}>
-                {submitting ? "Mengirim Pendaftaran..." : <><Send size={16} /> Kirim Pendaftaran</>}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+            {/* Navigation Footer */}
+            <div className="pt-4 border-t border-stone-100 flex items-center justify-between gap-3">
+              {step > 1 ? (
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-stone-300 font-semibold text-sm text-stone-700 hover:bg-stone-50 transition-colors cursor-pointer"
+                >
+                  <ArrowLeft size={16} aria-hidden="true" />
+                  <span>Sebelumnya</span>
+                </button>
+              ) : (
+                <div />
+              )}
 
-      {/* Modal Syarat & Ketentuan Pop-up */}
-      {showSyaratModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b mb-4">
-              <div className="flex items-center gap-2">
-                <FileCheck size={20} style={{ color: primary }} />
-                <h3 className="font-extrabold text-base text-gray-900">Syarat & Ketentuan Pendaftaran</h3>
-              </div>
-              <button onClick={() => setShowSyaratModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-2.5 text-xs text-gray-700 leading-relaxed mb-6">
-              {syaratList.map((item, idx) => (
-                <div key={idx} className="flex items-start gap-2.5 p-2 rounded-lg bg-gray-50">
-                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0" style={{ background: primary }}>
-                    {idx + 1}
-                  </span>
-                  <span>{item.replace(/^\d+[\.\)]\s*/, "")}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={() => setShowSyaratModal(false)}
-                className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
-                style={{ background: primary }}
-              >
-                Saya Mengerti
-              </button>
+              {step < 4 ? (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm text-white transition-opacity hover:opacity-95 cursor-pointer"
+                  style={{ backgroundColor: theme.primary }}
+                >
+                  <span>Lanjut</span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm border border-black/10 transition-opacity hover:opacity-95 disabled:opacity-60 shadow-sm cursor-pointer"
+                  style={{ backgroundColor: theme.accent, color: theme.onAccent }}
+                >
+                  {submitting ? (
+                    <span>Mengirim Pendaftaran...</span>
+                  ) : (
+                    <>
+                      <Send size={16} aria-hidden="true" />
+                      <span>Kirim Pendaftaran</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>
-      )}
+      </main>
+
+      {/* Modal Syarat & Ketentuan */}
+      <ModalDialog
+        open={showSyaratModal}
+        onClose={() => setShowSyaratModal(false)}
+        labelledBy="syarat-modal-title"
+        className="w-full max-w-lg"
+      >
+        <div className="bg-white rounded-3xl p-6 shadow-2xl border border-stone-200 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+            <div className="flex items-center gap-2">
+              <FileCheck size={20} style={{ color: theme.primary }} aria-hidden="true" />
+              <h3 id="syarat-modal-title" className="font-bold text-base text-stone-900">
+                Syarat &amp; Ketentuan Pendaftaran
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowSyaratModal(false)}
+              aria-label="Tutup syarat dan ketentuan"
+              className="min-w-9 min-h-9 rounded-full flex items-center justify-center text-stone-500 hover:bg-stone-100 hover:text-stone-800 cursor-pointer"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
+
+          <ol className="max-h-[60vh] overflow-y-auto pr-2 space-y-2.5 text-xs text-stone-700 leading-relaxed">
+            {syaratList.map((item, idx) => (
+              <li key={idx} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#faf8f4]">
+                <span
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 tabular-nums"
+                  style={{ backgroundColor: theme.primary }}
+                >
+                  {idx + 1}
+                </span>
+                <span>{item.replace(/^\d+[\.\)]\s*/, "")}</span>
+              </li>
+            ))}
+          </ol>
+
+          <div className="text-right pt-2">
+            <button
+              type="button"
+              onClick={() => setShowSyaratModal(false)}
+              className="px-5 py-2.5 rounded-xl text-xs font-bold text-white cursor-pointer"
+              style={{ backgroundColor: theme.primary }}
+            >
+              Saya Mengerti
+            </button>
+          </div>
+        </div>
+      </ModalDialog>
     </div>
   );
 }
 
 export default function DaftarPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-800 mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Memuat formulir pendaftaran...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#faf8f4]">
+          <div className="text-center space-y-3">
+            <div className="w-9 h-9 rounded-full border-2 border-emerald-800 border-t-transparent animate-spin mx-auto" />
+            <p className="text-stone-600 font-medium text-sm">Memuat formulir pendaftaran...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <DaftarForm />
     </Suspense>
   );

@@ -1,20 +1,26 @@
 import Link from "next/link";
-import { Calendar, Users, Banknote, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Calendar, Users, Banknote, ArrowRight, CheckCircle2, Clock } from "lucide-react";
+import { buildPsbTheme } from "@/lib/themeUtils";
 
 interface GelombangSectionProps {
   gelombang: Array<Record<string, unknown>>;
   config: Record<string, string>;
 }
 
-function formatDate(dateStr: string) {
+function formatDate(dateStr: string): string {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
-  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
-function formatRupiah(num: number) {
+function formatRupiah(num: number): string {
   if (!num || num === 0) return "Gratis";
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(num);
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(num);
 }
 
 function getStatus(g: Record<string, unknown>) {
@@ -27,119 +33,203 @@ function getStatus(g: Record<string, unknown>) {
 }
 
 export default function GelombangSection({ gelombang, config }: GelombangSectionProps) {
-  const primary = config.warna_primer || "#0f4c1e";
-  const accent = config.warna_aksen || "#c8a84b";
+  const theme = buildPsbTheme(config);
 
   return (
-    <section id="gelombang" className="py-20 px-4" style={{ background: "#f8f9fa" }}>
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <p className="text-sm font-semibold uppercase tracking-widest mb-2" style={{ color: accent }}>
-            {config.gelombang_badge || "Jadwal Pendaftaran"}
-          </p>
-          <h2 className="text-3xl sm:text-4xl font-extrabold mb-3" style={{ color: primary }}>
-            {config.gelombang_judul || "Gelombang Penerimaan Santri Baru"}
-          </h2>
-          {config.gelombang_deskripsi && (
-            <p className="text-gray-500 max-w-xl mx-auto text-base mt-2">
-              {config.gelombang_deskripsi}
+    <section id="gelombang" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-[#f3efe6] border-y border-stone-200/80">
+      <div className="max-w-7xl mx-auto space-y-12">
+        {/* Header Editorial */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 text-center md:text-left">
+          <div className="max-w-2xl mx-auto md:mx-0 space-y-2.5">
+            <p
+              className="text-xs font-bold uppercase tracking-[0.18em]"
+              style={{ color: theme.accentTextOnLight }}
+            >
+              {config.gelombang_badge || "Jadwal Pendaftaran"}
             </p>
-          )}
-          <div className="w-16 h-1 mx-auto rounded-full mt-3" style={{ background: `linear-gradient(90deg, ${accent}, #f0d080)` }} />
+            <h2
+              className="font-display text-3xl sm:text-4xl font-bold leading-tight"
+              style={{ color: theme.primary }}
+            >
+              {config.gelombang_judul || "Gelombang Penerimaan Santri Baru"}
+            </h2>
+          </div>
+          <p className="text-stone-600 max-w-md mx-auto md:mx-0 text-sm sm:text-base leading-relaxed">
+            {config.gelombang_deskripsi ||
+              "Pilih gelombang pendaftaran yang sedang berlangsung untuk memulai pengisian formulir santri baru."}
+          </p>
         </div>
 
         {gelombang.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
-            <Calendar size={48} className="mx-auto mb-3 opacity-30" />
-            <p>Informasi gelombang pendaftaran akan segera diumumkan.</p>
+          <div className="bg-white rounded-3xl border border-stone-200 py-14 px-6 text-center text-stone-500">
+            <Calendar size={40} className="mx-auto mb-3 opacity-40" aria-hidden="true" />
+            <p className="font-medium">Informasi gelombang pendaftaran akan segera diumumkan.</p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {gelombang.map((g) => {
               const status = getStatus(g);
+              const isOpen = status === "open";
+
               return (
-                <div
+                <article
                   key={String(g.id)}
-                  className="relative rounded-2xl overflow-hidden transition-all hover:-translate-y-1"
+                  className="bg-white rounded-3xl overflow-hidden border flex flex-col justify-between transition-transform duration-200 hover:-translate-y-0.5"
                   style={{
-                    background: "white",
-                    boxShadow: status === "open"
-                      ? `0 8px 30px ${accent}25, 0 0 0 2px ${accent}`
-                      : "0 4px 20px rgba(0,0,0,0.08)",
+                    borderColor: isOpen ? theme.accent : "#e7e5e4",
+                    boxShadow: isOpen ? `0 12px 28px -12px ${theme.primary}25` : "0 1px 3px rgba(0,0,0,0.04)",
                   }}
                 >
-                  {/* Status Badge */}
-                  <div
-                    className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
-                    style={{
-                      background: status === "open" ? "#dcfce7" : status === "upcoming" ? "#fef9c3" : "#fee2e2",
-                      color: status === "open" ? "#15803d" : status === "upcoming" ? "#a16207" : "#b91c1c",
-                    }}
-                  >
-                    {status === "open" ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-                    {status === "open" ? "Dibuka" : status === "upcoming" ? "Akan Datang" : "Ditutup"}
-                  </div>
+                  <div>
+                    <div
+                      className="p-6 pb-5 border-b border-stone-100 flex items-start justify-between gap-3"
+                      style={{
+                        backgroundColor: isOpen ? theme.primaryDark : "#faf8f4",
+                        color: isOpen ? "#ffffff" : theme.primary,
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-lg leading-snug">
+                          {String(g.nama)}
+                        </h3>
+                        {!!g.keterangan && (
+                          <p
+                            className={`text-xs mt-1 leading-relaxed ${
+                              isOpen ? "text-white/75" : "text-stone-600"
+                            }`}
+                          >
+                            {String(g.keterangan)}
+                          </p>
+                        )}
+                      </div>
 
-                  {/* Header */}
-                  <div className="p-5 pb-4" style={{ background: `linear-gradient(135deg, ${primary}, ${primary}dd)` }}>
-                    <h3 className="font-bold text-lg text-white leading-tight">{String(g.nama)}</h3>
-                    {!!g.keterangan && (
-                      <p className="text-white/60 text-xs mt-1">{String(g.keterangan)}</p>
-                    )}
-                  </div>
-
-                  {/* Body */}
-                  <div className="p-5 space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar size={15} style={{ color: accent }} />
-                      <span>
-                        {formatDate(String(g.tanggal_buka))} — {formatDate(String(g.tanggal_tutup))}
+                      <span
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0"
+                        style={{
+                          backgroundColor:
+                            status === "open"
+                              ? "#dcfce7"
+                              : status === "upcoming"
+                              ? "#fef3c7"
+                              : "#fee2e2",
+                          color:
+                            status === "open"
+                              ? "#166534"
+                              : status === "upcoming"
+                              ? "#92400e"
+                              : "#991b1b",
+                        }}
+                      >
+                        {status === "open" ? (
+                          <CheckCircle2 size={12} aria-hidden="true" />
+                        ) : (
+                          <Clock size={12} aria-hidden="true" />
+                        )}
+                        <span>
+                          {status === "open" ? "Dibuka" : status === "upcoming" ? "Segera" : "Ditutup"}
+                        </span>
                       </span>
                     </div>
-                    {!!g.kuota && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Users size={15} style={{ color: accent }} />
-                        <span>Kuota: {String(g.kuota)} santri</span>
+
+                    <dl className="p-6 space-y-3.5 text-sm">
+                      <div className="flex items-start gap-3">
+                        <Calendar
+                          size={16}
+                          className="mt-0.5 shrink-0"
+                          style={{ color: theme.accentTextOnLight }}
+                          aria-hidden="true"
+                        />
+                        <div>
+                          <dt className="text-[11px] uppercase tracking-wider font-semibold text-stone-500">
+                            Periode Pendaftaran
+                          </dt>
+                          <dd className="font-semibold text-stone-800 tabular-nums mt-0.5">
+                            {formatDate(String(g.tanggal_buka))} — {formatDate(String(g.tanggal_tutup))}
+                          </dd>
+                        </div>
                       </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Banknote size={15} style={{ color: accent }} />
-                      <span>Biaya: {formatRupiah(Number(g.biaya_pendaftaran))}</span>
-                    </div>
+
+                      {!!g.kuota && (
+                        <div className="flex items-start gap-3">
+                          <Users
+                            size={16}
+                            className="mt-0.5 shrink-0"
+                            style={{ color: theme.accentTextOnLight }}
+                            aria-hidden="true"
+                          />
+                          <div>
+                            <dt className="text-[11px] uppercase tracking-wider font-semibold text-stone-500">
+                              Kuota Penerimaan
+                            </dt>
+                            <dd className="font-semibold text-stone-800 tabular-nums mt-0.5">
+                              {String(g.kuota)} Santri
+                            </dd>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-start gap-3">
+                        <Banknote
+                          size={16}
+                          className="mt-0.5 shrink-0"
+                          style={{ color: theme.accentTextOnLight }}
+                          aria-hidden="true"
+                        />
+                        <div>
+                          <dt className="text-[11px] uppercase tracking-wider font-semibold text-stone-500">
+                            Biaya Pendaftaran
+                          </dt>
+                          <dd className="font-semibold text-stone-800 tabular-nums mt-0.5">
+                            {formatRupiah(Number(g.biaya_pendaftaran))}
+                          </dd>
+                        </div>
+                      </div>
+                    </dl>
                   </div>
 
-                  {/* CTA */}
-                  {status === "open" && (
-                    <div className="px-5 pb-5">
+                  {isOpen && (
+                    <div className="px-6 pb-6">
                       <Link
                         href={`/daftar?gelombang=${g.id}`}
-                        className="block text-center py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
-                        style={{ background: `linear-gradient(135deg, ${accent}, #f0d080)`, color: primary }}
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-sm transition-opacity hover:opacity-95"
+                        style={{ backgroundColor: theme.accent, color: theme.onAccent }}
                       >
-                        Daftar Gelombang Ini
+                        <span>Daftar Gelombang Ini</span>
+                        <ArrowRight size={15} aria-hidden="true" />
                       </Link>
                     </div>
                   )}
-                </div>
+                </article>
               );
             })}
           </div>
         )}
 
-        {/* CTA Banner */}
+        {/* Callout Banner Editorial Split */}
         <div
-          className="rounded-2xl p-8 text-center"
-          style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}
+          className="rounded-3xl p-7 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 text-white text-center md:text-left"
+          style={{ backgroundColor: theme.primaryDark }}
         >
-          <h3 className="text-2xl font-bold text-white mb-2">Siap Mendaftar?</h3>
-          <p className="text-white/70 mb-6">Isi formulir pendaftaran online sekarang dan jadilah bagian dari keluarga besar pesantren kami.</p>
+          <div className="space-y-2 max-w-xl">
+            <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: theme.accentLight }}>
+              {config.gelombang_cta_badge || "Pendaftaran Daring 24 Jam"}
+            </p>
+            <h3 className="font-display text-2xl sm:text-3xl font-bold">
+              {config.gelombang_cta_judul ||
+                "Siap Menjadi Bagian dari Keluarga Besar Pesantren?"}
+            </h3>
+            <p className="text-white/80 text-sm sm:text-base">
+              {config.gelombang_cta_deskripsi ||
+                "Lengkapi formulir pendaftaran dalam 4 langkah mudah dan dapatkan nomor registrasi secara instan."}
+            </p>
+          </div>
           <Link
             href="/daftar"
-            className="inline-flex items-center gap-2 px-8 py-3 rounded-full font-bold text-sm"
-            style={{ background: `linear-gradient(135deg, ${accent}, #f0d080)`, color: primary }}
+            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full font-bold text-sm sm:text-base shrink-0 transition-transform duration-200 hover:-translate-y-0.5 shadow-lg"
+            style={{ backgroundColor: theme.accent, color: theme.onAccent }}
           >
-            Mulai Pendaftaran <Clock size={16} />
+            <span>{config.gelombang_cta_tombol || "Mulai Pendaftaran"}</span>
+            <ArrowRight size={17} aria-hidden="true" />
           </Link>
         </div>
       </div>

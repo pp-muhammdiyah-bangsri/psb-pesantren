@@ -1,16 +1,37 @@
 "use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
-import { toDirectImageUrl, parseMediaUrl } from "@/lib/mediaUtils";
-import { parseGoogleMapsEmbedUrl, getMapsInputStatus } from "@/lib/mapsHelper";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Users, CheckCircle, XCircle, Clock, Download,
-  Search, Filter, LogOut, Eye, X, ChevronDown,
-  Palette, Calendar, Image as ImageIcon, ExternalLink,
-  Save, Plus, Trash2, ToggleLeft, ToggleRight, Phone,
-  Mail, MapPin, Sparkles, RefreshCw, BookOpen, Award, Layers, FileText, FileCheck, AlertTriangle, CheckCircle2, HelpCircle
-} from "lucide-react";
 import Link from "next/link";
+import {
+  Users,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Download,
+  Search,
+  LogOut,
+  Eye,
+  X,
+  Palette,
+  Calendar,
+  Image as ImageIcon,
+  ExternalLink,
+  Trash2,
+  BookOpen,
+  Award,
+  FileText,
+  ArrowUpRight,
+} from "lucide-react";
+import ModalDialog from "@/components/ModalDialog";
+import KustomisasiTab from "@/components/admin/KustomisasiTab";
+import {
+  GelombangTab,
+  GaleriTab,
+  ProgramTab,
+  type GelombangItem,
+  type GaleriItem,
+  type ProgramItem,
+} from "@/components/admin/AdminCrudTabs";
 
 interface Pendaftar {
   id: number;
@@ -40,86 +61,76 @@ interface Pendaftar {
   gelombang_psb?: { nama: string };
 }
 
-interface Gelombang {
-  id: number;
-  nama: string;
-  tanggal_buka: string;
-  tanggal_tutup: string;
-  kuota: number | null;
-  biaya_pendaftaran: number;
-  keterangan: string | null;
-  is_aktif: boolean;
+type DashboardTab = "pendaftar" | "kustomisasi" | "gelombang" | "galeri" | "program";
+
+function formatDateIndo(val?: string) {
+  if (!val) return "-";
+  const dt = new Date(val);
+  if (Number.isNaN(dt.getTime())) return val;
+  return dt.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
-interface GaleriItem {
-  id: number;
-  judul: string;
-  deskripsi?: string;
-  foto_url: string;
-  urutan: number;
+function formatGajiRp(val?: string) {
+  if (!val || val === "-") return "-";
+  const clean = val.trim();
+  if (/^rp/i.test(clean) || /[a-z]/i.test(clean)) return clean;
+  return `Rp ${clean}`;
 }
 
-const THEME_PRESETS = [
-  { name: "Pesantren Emerald (Klasik)", primer: "#0f4c1e", aksen: "#c8a84b", desc: "Hijau Islami & Emas" },
-  { name: "Bahari Nusantara", primer: "#1e3a8a", aksen: "#eab308", desc: "Biru Navy & Emas Cerah" },
-  { name: "Kubah Nabawi (Teal)", primer: "#0f766e", aksen: "#d97706", desc: "Toska & Kuning Amber" },
-  { name: "Marun Andalusia", primer: "#831843", aksen: "#d4a373", desc: "Merah Marun & Rose Gold" },
-  { name: "Hutan Rabbani", primer: "#14532d", aksen: "#f59e0b", desc: "Forest Green & Amber" },
-  { name: "Royal Kesultanan", primer: "#1d4ed8", aksen: "#c8a84b", desc: "Biru Safir & Emas" },
-  { name: "Pesantren Salaf (Moka)", primer: "#5c3d2e", aksen: "#c8a84b", desc: "Coklat Kayu & Emas" },
-  { name: "Zaitun Earthy", primer: "#2d503d", aksen: "#ea580c", desc: "Sage Green & Terracotta" },
-  { name: "Kasturi Royal", primer: "#581c87", aksen: "#eab308", desc: "Ungu Elegan & Emas" },
-  { name: "Modern Charcoal", primer: "#334155", aksen: "#0d9488", desc: "Abu Slate & Cyan Teal" },
-  { name: "Midnight Onyx", primer: "#18181b", aksen: "#eab308", desc: "Hitam Pekat & Gold" },
-  { name: "Crimson Al-Aqsa", primer: "#991b1b", aksen: "#fbbf24", desc: "Merah Crimson & Emas" },
-];
+function getJalurAndJenjang(p: Pendaftar) {
+  const isLksa =
+    (p.jalur_pendaftaran || (p.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")).toLowerCase() ===
+    "lksa";
+  const jenjang =
+    p.jenjang_tujuan || p.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1] || "SMP";
+  const gaji =
+    p.penghasilan_orang_tua || p.catatan_admin?.match(/\[Gaji:\s*([^\]]+)\]/i)?.[1] || "-";
+  return { isLksa, jenjang, gaji };
+}
 
-const COLOR_PRESETS_PRIMARY = [
-  { name: "Hijau Emerald", hex: "#0f4c1e" },
-  { name: "Hijau Forest", hex: "#14532d" },
-  { name: "Hijau Sage/Olive", hex: "#2d503d" },
-  { name: "Hijau Daun Tua", hex: "#166534" },
-  { name: "Toska/Teal Nabawi", hex: "#0f766e" },
-  { name: "Biru Navy Klasik", hex: "#1e3a8a" },
-  { name: "Biru Safir/Royal", hex: "#1d4ed8" },
-  { name: "Biru Ocean Deep", hex: "#0369a1" },
-  { name: "Biru Denim", hex: "#2563eb" },
-  { name: "Merah Marun", hex: "#831843" },
-  { name: "Merah Burgundy", hex: "#991b1b" },
-  { name: "Coklat Espresso", hex: "#78350f" },
-  { name: "Coklat Moka", hex: "#5c3d2e" },
-  { name: "Ungu Royal", hex: "#581c87" },
-  { name: "Abu Slate Charcoal", hex: "#334155" },
-  { name: "Hitam Onyx Elegan", hex: "#18181b" },
-];
-
-const COLOR_PRESETS_ACCENT = [
-  { name: "Emas Islami", hex: "#c8a84b" },
-  { name: "Emas Muda Cerah", hex: "#eab308" },
-  { name: "Kuning Amber", hex: "#d97706" },
-  { name: "Oranye Hangat", hex: "#ea580c" },
-  { name: "Terracotta Bata", hex: "#c2410c" },
-  { name: "Rose Gold", hex: "#d4a373" },
-  { name: "Cyan Teal", hex: "#0d9488" },
-  { name: "Hijau Mint Jade", hex: "#10b981" },
-  { name: "Biru Langit Sky", hex: "#0284c7" },
-  { name: "Ungu Lavender", hex: "#9333ea" },
-  { name: "Merah Coral", hex: "#f43f5e" },
-  { name: "Kuning Lemon", hex: "#facc15" },
-  { name: "Perak Platinum", hex: "#94a3b8" },
-  { name: "Krem Emas", hex: "#fde68a" },
-];
+const STATUS_BADGE_MAP: Record<
+  string,
+  { bg: string; text: string; border: string; label: string }
+> = {
+  menunggu: {
+    bg: "bg-amber-50",
+    text: "text-amber-800",
+    border: "border-amber-200",
+    label: "Menunggu",
+  },
+  diterima: {
+    bg: "bg-emerald-50",
+    text: "text-emerald-800",
+    border: "border-emerald-200",
+    label: "Diterima",
+  },
+  ditolak: {
+    bg: "bg-red-50",
+    text: "text-red-800",
+    border: "border-red-200",
+    label: "Ditolak",
+  },
+  imported: {
+    bg: "bg-blue-50",
+    text: "text-blue-800",
+    border: "border-blue-200",
+    label: "Imported",
+  },
+};
 
 function AdminDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") || "pendaftar";
+  const rawTab = searchParams.get("tab") || "pendaftar";
+  const initialTab: DashboardTab = ["pendaftar", "kustomisasi", "gelombang", "galeri", "program"].includes(
+    rawTab
+  )
+    ? (rawTab as DashboardTab)
+    : "pendaftar";
 
-  const [activeTab, setActiveTab] = useState<"pendaftar" | "kustomisasi" | "gelombang" | "galeri" | "program">(initialTab as any);
-
-  // Auth
-  const token = typeof window !== "undefined" ? localStorage.getItem("psb_admin_token") : null;
-  const adminNama = typeof window !== "undefined" ? localStorage.getItem("psb_admin_nama") : "Admin";
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
+  const [token, setToken] = useState<string | null>(null);
+  const [adminNama, setAdminNama] = useState("Admin");
 
   // Data Pendaftar State
   const [pendaftarList, setPendaftarList] = useState<Pendaftar[]>([]);
@@ -131,52 +142,30 @@ function AdminDashboardContent() {
   const [selectedPendaftar, setSelectedPendaftar] = useState<Pendaftar | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [catatanVerifikasi, setCatatanVerifikasi] = useState("");
+  const [pendaftarError, setPendaftarError] = useState("");
 
   // Kustomisasi Web State
   const [config, setConfig] = useState<Record<string, string>>({});
   const [savingConfig, setSavingConfig] = useState(false);
   const [configMsg, setConfigMsg] = useState("");
 
-  // Gelombang State
-  const [gelombangList, setGelombangList] = useState<Gelombang[]>([]);
-  const [loadingGelombang, setLoadingGelombang] = useState(false);
-  const [showGelombangForm, setShowGelombangForm] = useState(false);
-  const [gelombangForm, setGelombangForm] = useState({
-    nama: "",
-    tanggal_buka: "",
-    tanggal_tutup: "",
-    kuota: "",
-    biaya_pendaftaran: "250000",
-    keterangan: ""
-  });
-
-  // Galeri State
+  // Gelombang, Galeri, Program State
+  const [gelombangList, setGelombangList] = useState<GelombangItem[]>([]);
   const [galeriList, setGaleriList] = useState<GaleriItem[]>([]);
-  const [loadingGaleri, setLoadingGaleri] = useState(false);
-  const [showGaleriForm, setShowGaleriForm] = useState(false);
-  const [galeriForm, setGaleriForm] = useState({
-    judul: "",
-    deskripsi: "",
-    foto_url: "",
-    urutan: "1"
-  });
-
-  // Program Unggulan State
-  interface ProgramItem { id: number; nama: string; deskripsi: string; icon: string; warna: string; urutan: number; is_aktif: boolean; }
   const [programList, setProgramList] = useState<ProgramItem[]>([]);
   const [loadingProgram, setLoadingProgram] = useState(false);
-  const [showProgramForm, setShowProgramForm] = useState(false);
-  const [programForm, setProgramForm] = useState({ nama: "", deskripsi: "", icon: "⭐", warna: "#0f4c1e", urutan: "1" });
-  const ICON_PRESETS = ["⭐","📖","🕌","🏫","🎓","💻","🌍","⚽","🎨","🔬","🤝","🌿","📿","🏆","💡","🎵"];
 
-  // Auth Guard
+  // Sync auth safely on client mount (prevents SSR hydration mismatch)
   useEffect(() => {
-    if (!token) {
+    const t = localStorage.getItem("psb_admin_token");
+    if (!t) {
       router.push("/admin/login");
+      return;
     }
-  }, [token, router]);
+    setToken(t);
+    setAdminNama(localStorage.getItem("psb_admin_nama") || "Admin");
+  }, [router]);
 
-  // Load Pendaftar
   const fetchPendaftar = useCallback(async () => {
     if (!token) return;
     setLoadingPendaftar(true);
@@ -184,7 +173,7 @@ function AdminDashboardContent() {
       const params = new URLSearchParams();
       if (filterStatus !== "semua") params.set("status", filterStatus);
       const res = await fetch(`/api/admin/pendaftar?${params}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const d = await res.json();
       if (d.ok) setPendaftarList(d.data || []);
@@ -195,7 +184,6 @@ function AdminDashboardContent() {
     }
   }, [token, filterStatus]);
 
-  // Load Config
   const fetchConfig = useCallback(async () => {
     try {
       const res = await fetch("/api/config");
@@ -206,41 +194,48 @@ function AdminDashboardContent() {
     }
   }, []);
 
-  // Load Gelombang
   const fetchGelombang = useCallback(async () => {
-    setLoadingGelombang(true);
+    if (!token) return;
     try {
-      const res = await fetch("/api/gelombang");
+      const res = await fetch("/api/gelombang?all=1", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const d = await res.json();
       if (d.ok) setGelombangList(d.data || []);
     } catch (e) {
       console.error("Gagal load gelombang:", e);
-    } finally {
-      setLoadingGelombang(false);
     }
-  }, []);
+  }, [token]);
 
-  // Load Galeri
   const fetchGaleri = useCallback(async () => {
-    setLoadingGaleri(true);
     try {
       const res = await fetch("/api/galeri");
       const d = await res.json();
       if (d.ok) setGaleriList(d.data || []);
     } catch (e) {
       console.error("Gagal load galeri:", e);
-    } finally {
-      setLoadingGaleri(false);
     }
   }, []);
 
-  // Initial Load
+  const fetchPrograms = useCallback(async () => {
+    setLoadingProgram(true);
+    try {
+      const res = await fetch("/api/program");
+      const d = await res.json();
+      if (d.ok) setProgramList(d.data || []);
+    } finally {
+      setLoadingProgram(false);
+    }
+  }, []);
+
   useEffect(() => {
+    if (!token) return;
     fetchPendaftar();
     fetchConfig();
     fetchGelombang();
     fetchGaleri();
-  }, [fetchPendaftar, fetchConfig, fetchGelombang, fetchGaleri]);
+    fetchPrograms();
+  }, [token, fetchPendaftar, fetchConfig, fetchGelombang, fetchGaleri, fetchPrograms]);
 
   const logout = () => {
     localStorage.removeItem("psb_admin_token");
@@ -248,9 +243,9 @@ function AdminDashboardContent() {
     router.push("/admin/login");
   };
 
-  // Pendaftar Actions
   const deletePendaftar = async (id: number, nama: string) => {
-    if (!confirm(`Apakah Anda yakin ingin MENGHAPUS / DROP data pendaftar "${nama}"?\n\nData ini akan dihapus secara permanen dari sistem.`)) return;
+    if (!token || !confirm(`Hapus permanen data pendaftar "${nama}"?`)) return;
+    setPendaftarError("");
     try {
       const res = await fetch(`/api/admin/pendaftar?id=${id}`, {
         method: "DELETE",
@@ -258,13 +253,13 @@ function AdminDashboardContent() {
       });
       const d = await res.json();
       if (d.ok) {
-        setPendaftarList(prev => prev.filter(p => p.id !== id));
+        setPendaftarList((prev) => prev.filter((p) => p.id !== id));
         if (selectedPendaftar?.id === id) setSelectedPendaftar(null);
       } else {
-        alert(d.error || "Gagal menghapus data pendaftar.");
+        setPendaftarError(d.error || "Gagal menghapus data pendaftar.");
       }
     } catch {
-      alert("Terjadi kesalahan jaringan.");
+      setPendaftarError("Terjadi kesalahan jaringan saat menghapus data.");
     }
   };
 
@@ -275,7 +270,7 @@ function AdminDashboardContent() {
       await fetch("/api/admin/pendaftar", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ id, status, catatan_admin: catatanVerifikasi })
+        body: JSON.stringify({ id, status, catatan_admin: catatanVerifikasi }),
       });
       await fetchPendaftar();
       setSelectedPendaftar(null);
@@ -284,31 +279,6 @@ function AdminDashboardContent() {
     }
   };
 
-  const exportCSV = () => {
-    const headers = ["No Registrasi", "Nama Lengkap", "JK", "Jalur Pendaftaran", "Jenjang Tujuan", "Penghasilan Ortu", "No HP Wali", "Asal Sekolah", "Peminatan", "Status", "Tanggal Daftar"];
-    const rows = filteredPendaftar.map((d) => [
-      d.nomor_registrasi || `PSB-${d.id}`,
-      d.nama_lengkap,
-      d.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki",
-      (d.jalur_pendaftaran || (d.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")) === "lksa" ? "LKSA (Gratis)" : "Reguler (MBS)",
-      d.jenjang_tujuan || (d.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP",
-      d.penghasilan_orang_tua || d.catatan_admin?.match(/\[Gaji:\s*([^\]]+)\]/i)?.[1] || "-",
-      d.no_hp_wali,
-      d.asal_sekolah,
-      d.jurusan || "-",
-      d.status,
-      new Date(d.created_at).toLocaleDateString("id-ID")
-    ]);
-    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c || ""}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pendaftar_psb_${Date.now()}.csv`;
-    a.click();
-  };
-
-  // Config Actions
   const handleConfigChange = (key: string, val: string) => {
     setConfig((prev) => ({ ...prev, [key]: val }));
   };
@@ -321,13 +291,13 @@ function AdminDashboardContent() {
       const res = await fetch("/api/config", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(config)
+        body: JSON.stringify(config),
       });
       const d = await res.json();
       if (d.ok) {
-        setConfigMsg("Pengaturan tampilan web berhasil disimpan! Perubahan langsung aktif di halaman depan.");
+        setConfigMsg("Pengaturan tampilan web berhasil disimpan dan langsung aktif di landing page.");
       } else {
-        setConfigMsg("Gagal menyimpan: " + (d.error || "Terjadi kesalahan"));
+        setConfigMsg("Gagal menyimpan: " + (d.error || "Terjadi kesalahan."));
       }
     } catch (err: unknown) {
       setConfigMsg("Error: " + (err instanceof Error ? err.message : String(err)));
@@ -336,291 +306,279 @@ function AdminDashboardContent() {
     }
   };
 
-  // Gelombang Actions
-  const saveGelombang = async () => {
-    if (!token || !gelombangForm.nama || !gelombangForm.tanggal_buka || !gelombangForm.tanggal_tutup) return;
-    try {
-      await fetch("/api/gelombang", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          ...gelombangForm,
-          kuota: gelombangForm.kuota ? Number(gelombangForm.kuota) : null,
-          biaya_pendaftaran: Number(gelombangForm.biaya_pendaftaran)
-        })
-      });
-      setGelombangForm({ nama: "", tanggal_buka: "", tanggal_tutup: "", kuota: "", biaya_pendaftaran: "250000", keterangan: "" });
-      setShowGelombangForm(false);
-      await fetchGelombang();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const toggleGelombang = async (id: number, currentStatus: boolean) => {
-    if (!token) return;
-    try {
-      await fetch(`/api/admin/gelombang/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ is_aktif: !currentStatus })
-      });
-      await fetchGelombang();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Galeri Actions
-  const saveGaleri = async () => {
-    if (!token || !galeriForm.judul || !galeriForm.foto_url) return;
-    try {
-      await fetch("/api/admin/galeri", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          ...galeriForm,
-          urutan: Number(galeriForm.urutan)
-        })
-      });
-      setGaleriForm({ judul: "", deskripsi: "", foto_url: "", urutan: "1" });
-      setShowGaleriForm(false);
-      await fetchGaleri();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const deleteGaleri = async (id: number) => {
-    if (!token || !confirm("Hapus foto ini dari galeri?")) return;
-    try {
-      await fetch(`/api/admin/galeri?id=${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      await fetchGaleri();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Filtered Pendaftar
   const filteredPendaftar = pendaftarList.filter((d) => {
+    const q = searchQuery.toLowerCase();
     const matchSearch =
-      (d.nama_lengkap && d.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (d.nomor_registrasi && d.nomor_registrasi.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (d.asal_sekolah && d.asal_sekolah.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      !q ||
+      (d.nama_lengkap && d.nama_lengkap.toLowerCase().includes(q)) ||
+      (d.nomor_registrasi && d.nomor_registrasi.toLowerCase().includes(q)) ||
+      (d.asal_sekolah && d.asal_sekolah.toLowerCase().includes(q)) ||
       (d.no_hp_wali && d.no_hp_wali.includes(searchQuery));
     if (!matchSearch) return false;
 
-    if (filterJenjang !== "semua") {
-      const jenjang = (d.jenjang_tujuan || (d.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP").toUpperCase();
-      if (jenjang !== filterJenjang.toUpperCase()) return false;
+    const { isLksa, jenjang } = getJalurAndJenjang(d);
+    if (filterJenjang !== "semua" && jenjang.toUpperCase() !== filterJenjang.toUpperCase()) {
+      return false;
     }
-
-    if (filterJalur !== "semua") {
-      const jalur = (d.jalur_pendaftaran || (d.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")).toLowerCase();
-      if (jalur !== filterJalur.toLowerCase()) return false;
+    if (filterJalur !== "semua" && (isLksa ? "lksa" : "reguler") !== filterJalur.toLowerCase()) {
+      return false;
     }
-
     return true;
   });
+
+  const exportCSV = () => {
+    const headers = [
+      "No Registrasi",
+      "Nama Lengkap",
+      "JK",
+      "Jalur Pendaftaran",
+      "Jenjang Tujuan",
+      "Penghasilan Ortu",
+      "No HP Wali",
+      "Asal Sekolah",
+      "Peminatan",
+      "Status",
+      "Tanggal Daftar",
+    ];
+    const rows = filteredPendaftar.map((d) => {
+      const { isLksa, jenjang, gaji } = getJalurAndJenjang(d);
+      return [
+        d.nomor_registrasi || `PSB-${d.id}`,
+        d.nama_lengkap,
+        d.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki",
+        isLksa ? "LKSA (Gratis)" : "Reguler (MBS)",
+        jenjang,
+        gaji,
+        d.no_hp_wali,
+        d.asal_sekolah,
+        d.jurusan || "-",
+        d.status,
+        new Date(d.created_at).toLocaleDateString("id-ID"),
+      ];
+    });
+    const csv = [headers, ...rows]
+      .map((r) => r.map((c) => `"${c || ""}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pendaftar_psb_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const stats = {
     total: pendaftarList.length,
     menunggu: pendaftarList.filter((d) => d.status === "menunggu").length,
     diterima: pendaftarList.filter((d) => d.status === "diterima").length,
-    ditolak: pendaftarList.filter((d) => d.status === "ditolak").length
+    ditolak: pendaftarList.filter((d) => d.status === "ditolak").length,
   };
 
   const primaryColor = config.warna_primer || "#0f4c1e";
-  const accentColor = config.warna_aksen || "#c8a84b";
+
+  const handleSelectTab = (tab: DashboardTab, btn: HTMLButtonElement) => {
+    setActiveTab(tab);
+    btn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  };
+
+  const selectedMeta = selectedPendaftar ? getJalurAndJenjang(selectedPendaftar) : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* ─── Top Admin Bar ─── */}
-      <header className="bg-white border-b sticky top-0 z-40 px-6 py-3.5 shadow-sm" style={{ borderColor: "#e5e7eb" }}>
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-white shadow-md" style={{ background: `linear-gradient(135deg, ${primaryColor}, #1a6b2b)` }}>
+    <div className="min-h-screen bg-stone-50 flex flex-col">
+      {/* ─── Top Admin Bar (Tanpa overflow mobile & tanpa duplikasi link) ─── */}
+      <header className="bg-white border-b border-stone-200 sticky top-0 z-40 px-4 sm:px-6 py-3 shadow-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm text-white shadow-xs shrink-0"
+              style={{ background: `linear-gradient(135deg, ${primaryColor}, #1a6b2b)` }}
+            >
               PSB
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-base leading-tight" style={{ color: primaryColor }}>
-                  {config.nama_pesantren || "Panel Admin PSB"}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <h1
+                  className="font-bold text-sm sm:text-base leading-tight truncate"
+                  style={{ color: primaryColor }}
+                >
+                  {config.nama_singkat || config.nama_pesantren || "Panel Admin PSB"}
                 </h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                <span className="hidden sm:inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
                   ONLINE
                 </span>
               </div>
-              <p className="text-xs text-gray-500">Pusat Kendali Pendaftaran & Kustomisasi Web</p>
+              <p className="text-[11px] sm:text-xs text-stone-500 truncate">
+                Pusat Kendali Pendaftaran &amp; CMS Website
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/admin/pengajar"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors"
-            >
-              <Award size={14} className="text-emerald-700" />
-              <span>Kelola Pengajar & Pimpinan</span>
-            </Link>
-
+          <div className="flex items-center gap-2 shrink-0">
             <Link
               href="/"
               target="_blank"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+              aria-label="Lihat Website Publik di tab baru"
+              className="inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 rounded-xl text-xs font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200 transition-colors"
             >
-              <ExternalLink size={14} />
-              <span>Lihat Website Publik</span>
+              <ExternalLink size={14} aria-hidden="true" />
+              <span className="hidden sm:inline">Lihat Web</span>
             </Link>
 
-            <div className="h-6 w-px bg-gray-200" />
-
-            <div className="text-right hidden sm:block">
-              <span className="block text-xs font-semibold text-gray-800">{adminNama}</span>
-              <span className="block text-[11px] text-gray-400">Panitia PSB</span>
+            <div className="hidden md:block text-right px-2 border-l border-stone-200">
+              <span className="block text-xs font-semibold text-stone-800">{adminNama}</span>
+              <span className="block text-[11px] text-stone-500">Panitia PSB</span>
             </div>
 
             <button
+              type="button"
               onClick={logout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-              title="Keluar dari Panel Admin"
+              aria-label="Keluar dari Panel Admin"
+              className="inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 rounded-xl text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
             >
-              <LogOut size={14} />
+              <LogOut size={14} aria-hidden="true" />
               <span className="hidden sm:inline">Keluar</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* ─── Main Tabs Navigation ─── */}
-      <div className="bg-white border-b shadow-sm" style={{ borderColor: "#e5e7eb" }}>
-        <div className="max-w-7xl mx-auto px-6 flex gap-2 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab("pendaftar")}
-            className={`flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 transition-all ${
-              activeTab === "pendaftar"
-                ? "border-green-700 text-green-800 bg-green-50/50"
-                : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <Users size={17} />
-            <span>Data Pendaftar</span>
-            {stats.total > 0 && (
-              <span className="ml-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800 font-bold">
-                {stats.total}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveTab("kustomisasi")}
-            className={`flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 transition-all ${
-              activeTab === "kustomisasi"
-                ? "border-green-700 text-green-800 bg-green-50/50"
-                : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <Palette size={17} />
-            <span>🎨 Kustomisasi Tampilan Web</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("gelombang")}
-            className={`flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 transition-all ${
-              activeTab === "gelombang"
-                ? "border-green-700 text-green-800 bg-green-50/50"
-                : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <Calendar size={17} />
-            <span>Gelombang PSB</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("galeri")}
-            className={`flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 transition-all ${
-              activeTab === "galeri"
-                ? "border-green-700 text-green-800 bg-green-50/50"
-                : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <ImageIcon size={17} />
-            <span>Galeri Foto</span>
-          </button>
-
-          <button
-            onClick={() => { setActiveTab("program"); if (programList.length === 0) { setLoadingProgram(true); fetch("/api/program").then(r=>r.json()).then(d=>{ if(d.ok) setProgramList(d.data||[]); setLoadingProgram(false); }); } }}
-            className={`flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 transition-all ${
-              activeTab === "program"
-                ? "border-green-700 text-green-800 bg-green-50/50"
-                : "border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-            }`}
-          >
-            <BookOpen size={17} />
-            <span>Program Unggulan</span>
-          </button>
+      {/* ─── Unified Admin Tab Navigation ─── */}
+      <nav
+        aria-label="Navigasi Modul Admin"
+        className="bg-white border-b border-stone-200 shadow-xs"
+      >
+        <div
+          role="tablist"
+          aria-label="Bagian Dashboard Admin"
+          className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center gap-1 overflow-x-auto"
+        >
+          {[
+            { id: "pendaftar" as DashboardTab, label: "Data Pendaftar", icon: Users, badge: stats.total },
+            { id: "kustomisasi" as DashboardTab, label: "Kustomisasi Web", icon: Palette },
+            { id: "gelombang" as DashboardTab, label: "Gelombang PSB", icon: Calendar },
+            { id: "galeri" as DashboardTab, label: "Galeri Foto", icon: ImageIcon },
+            { id: "program" as DashboardTab, label: "Program Unggulan", icon: BookOpen },
+          ].map(({ id, label, icon: Icon, badge }) => {
+            const active = activeTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={(e) => handleSelectTab(id, e.currentTarget)}
+                className={`relative flex items-center gap-2 py-3.5 px-3.5 font-semibold text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                  active
+                    ? "text-emerald-900 bg-emerald-50/60"
+                    : "text-stone-600 hover:text-stone-900 hover:bg-stone-50"
+                }`}
+              >
+                <Icon size={16} aria-hidden="true" />
+                <span>{label}</span>
+                {badge !== undefined && badge > 0 && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold tabular-nums">
+                    {badge}
+                  </span>
+                )}
+                {active && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-x-0 bottom-0 h-[3px]"
+                    style={{ backgroundColor: primaryColor }}
+                  />
+                )}
+              </button>
+            );
+          })}
 
           <Link
             href="/admin/pengajar"
-            className="flex items-center gap-2 py-3.5 px-4 font-semibold text-sm border-b-2 border-transparent text-gray-500 hover:text-emerald-800 hover:bg-emerald-50/50 transition-all shrink-0"
+            className="flex items-center gap-2 py-3.5 px-3.5 font-semibold text-xs sm:text-sm whitespace-nowrap shrink-0 text-stone-600 hover:text-emerald-800 hover:bg-emerald-50/50 transition-colors"
           >
-            <Award size={17} />
-            <span>Pengajar & Pimpinan</span>
+            <Award size={16} aria-hidden="true" />
+            <span>Pengajar &amp; Pimpinan</span>
           </Link>
         </div>
-      </div>
+      </nav>
 
-      {/* ─── Main Content Container ─── */}
+      {/* ─── Main Content ─── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full flex-1">
-
-        {/* ═══════════════════════════════════════════════════════════════════
-            TAB 1: DATA PENDAFTAR
-           ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 1: DATA PENDAFTAR */}
         {activeTab === "pendaftar" && (
-          <div>
+          <div className="space-y-5">
+            {pendaftarError && (
+              <div
+                role="alert"
+                className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center justify-between"
+              >
+                <span>{pendaftarError}</span>
+                <button
+                  type="button"
+                  onClick={() => setPendaftarError("")}
+                  aria-label="Tutup pesan error"
+                  className="cursor-pointer"
+                >
+                  <X size={15} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
               {[
                 { label: "Total Pendaftar", value: stats.total, icon: Users, color: primaryColor, bg: "#dcfce7" },
                 { label: "Menunggu Verifikasi", value: stats.menunggu, icon: Clock, color: "#a16207", bg: "#fef9c3" },
                 { label: "Lulus / Diterima", value: stats.diterima, icon: CheckCircle, color: "#15803d", bg: "#bbf7d0" },
-                { label: "Tidak Diterima", value: stats.ditolak, icon: XCircle, color: "#b91c1c", bg: "#fecaca" },
+                { label: "Tidak Diterima", value: stats.ditolak, icon: XCircle, color: "#b91c1c", bg: "#fee2e2" },
               ].map(({ label, value, icon: Icon, color, bg }) => (
-                <div key={label} className="bg-white rounded-2xl p-4 shadow-sm border flex items-center gap-3" style={{ borderColor: "#f0f0f0" }}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm" style={{ background: bg }}>
-                    <Icon size={22} style={{ color }} />
+                <div
+                  key={label}
+                  className="bg-white rounded-2xl p-4 shadow-xs border border-stone-200 flex items-center gap-3"
+                >
+                  <div
+                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: bg }}
+                  >
+                    <Icon size={20} style={{ color }} aria-hidden="true" />
                   </div>
-                  <div>
-                    <p className="text-2xl font-black leading-tight" style={{ color }}>{value}</p>
-                    <p className="text-xs text-gray-500 font-medium">{label}</p>
+                  <div className="min-w-0">
+                    <p className="text-xl sm:text-2xl font-black leading-tight tabular-nums" style={{ color }}>
+                      {value}
+                    </p>
+                    <p className="text-[11px] sm:text-xs text-stone-600 font-medium truncate">{label}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Toolbar: Search, Filter, Export */}
-            <div className="bg-white rounded-2xl shadow-sm border p-4 mb-4 flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between" style={{ borderColor: "#f0f0f0" }}>
+            {/* Filter & Search Bar */}
+            <search className="bg-white rounded-2xl shadow-xs border border-stone-200 p-4 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
               <div className="relative flex-1">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <label htmlFor="cari-pendaftar" className="sr-only">
+                  Cari nama santri, nomor registrasi, atau asal sekolah
+                </label>
+                <Search
+                  size={16}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
+                  aria-hidden="true"
+                />
                 <input
-                  type="text"
+                  id="cari-pendaftar"
+                  type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari nama santri, no registrasi, asal sekolah..."
-                  className="w-full border rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                  style={{ borderColor: "#e5e7eb" }}
+                  className="w-full min-h-10 border border-stone-300 rounded-xl pl-10 pr-4 py-2 text-sm text-stone-900 placeholder:text-stone-400 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
                 <select
+                  aria-label="Filter Jalur Pendaftaran"
                   value={filterJalur}
                   onChange={(e) => setFilterJalur(e.target.value)}
-                  className="border rounded-xl px-3 py-1.5 text-xs font-semibold bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400"
-                  style={{ borderColor: "#e5e7eb" }}
+                  className="min-h-10 border border-stone-300 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 >
                   <option value="semua">Semua Jalur</option>
                   <option value="reguler">Reguler (MBS)</option>
@@ -628,10 +586,10 @@ function AdminDashboardContent() {
                 </select>
 
                 <select
+                  aria-label="Filter Jenjang Tujuan"
                   value={filterJenjang}
                   onChange={(e) => setFilterJenjang(e.target.value)}
-                  className="border rounded-xl px-3 py-1.5 text-xs font-semibold bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-400"
-                  style={{ borderColor: "#e5e7eb" }}
+                  className="min-h-10 border border-stone-300 rounded-xl px-3 py-1.5 text-xs font-semibold bg-white text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 >
                   <option value="semua">Semua Jenjang</option>
                   <option value="SMP">SMP</option>
@@ -639,15 +597,16 @@ function AdminDashboardContent() {
                   <option value="SMK">SMK</option>
                 </select>
 
-                <div className="flex bg-gray-100 p-1 rounded-xl">
+                <div className="flex bg-stone-100 p-1 rounded-xl overflow-x-auto">
                   {["semua", "menunggu", "diterima", "ditolak"].map((s) => (
                     <button
                       key={s}
+                      type="button"
                       onClick={() => setFilterStatus(s)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize whitespace-nowrap cursor-pointer transition-colors ${
                         filterStatus === s
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-500 hover:text-gray-800"
+                          ? "bg-white text-stone-900 shadow-xs"
+                          : "text-stone-600 hover:text-stone-900"
                       }`}
                     >
                       {s}
@@ -656,1591 +615,464 @@ function AdminDashboardContent() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={exportCSV}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm hover:opacity-95 transition-all"
+                  className="inline-flex items-center gap-2 min-h-10 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-95 cursor-pointer"
                   style={{ background: primaryColor }}
                 >
-                  <Download size={16} />
+                  <Download size={15} aria-hidden="true" />
                   <span>Export CSV</span>
                 </button>
               </div>
-            </div>
+            </search>
 
-            {/* Table */}
-            <div className="bg-white rounded-2xl shadow-sm border overflow-hidden" style={{ borderColor: "#f0f0f0" }}>
+            {/* List / Table Container */}
+            <div className="bg-white rounded-2xl shadow-xs border border-stone-200 overflow-hidden">
               {loadingPendaftar ? (
-                <div className="p-16 text-center text-gray-400">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-800 mx-auto mb-3" />
-                  <span>Memuat data pendaftar...</span>
+                <div className="p-16 text-center text-stone-500">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-800 mx-auto mb-3" />
+                  <span className="text-sm">Memuat data pendaftar...</span>
                 </div>
               ) : filteredPendaftar.length === 0 ? (
-                <div className="p-16 text-center text-gray-400">
-                  <Users size={40} className="mx-auto text-gray-300 mb-2" />
-                  <p className="font-semibold text-gray-600">Tidak ada data pendaftar ditemukan.</p>
-                  <p className="text-xs text-gray-400">Calon santri yang mendaftar via web akan muncul di sini secara real-time.</p>
+                <div className="p-16 text-center text-stone-500">
+                  <Users size={38} className="mx-auto text-stone-300 mb-2" aria-hidden="true" />
+                  <p className="font-semibold text-stone-700">Tidak ada data pendaftar ditemukan.</p>
+                  <p className="text-xs text-stone-500 mt-1">
+                    Ubah filter pencarian atau tunggu calon santri mendaftar via website.
+                  </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="bg-gray-50/80 border-b text-xs text-gray-500 font-bold uppercase tracking-wider" style={{ borderColor: "#f0f0f0" }}>
-                        <th className="px-5 py-3.5">No. Registrasi</th>
-                        <th className="px-5 py-3.5">Nama Calon Santri</th>
-                        <th className="px-5 py-3.5">Jalur & Jenjang</th>
-                        <th className="px-5 py-3.5">Pendidikan Asal</th>
-                        <th className="px-5 py-3.5">Wali & WhatsApp</th>
-                        <th className="px-5 py-3.5 text-center">Status</th>
-                        <th className="px-5 py-3.5 text-center">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {filteredPendaftar.map((p) => {
-                        const statusBadge = {
-                          menunggu: { bg: "bg-yellow-50", text: "text-yellow-800", border: "border-yellow-200", label: "Menunggu" },
-                          diterima: { bg: "bg-green-50", text: "text-green-800", border: "border-green-200", label: "Diterima" },
-                          ditolak: { bg: "bg-red-50", text: "text-red-800", border: "border-red-200", label: "Ditolak" },
-                          imported: { bg: "bg-blue-50", text: "text-blue-800", border: "border-blue-200", label: "Imported" },
-                        }[p.status] || { bg: "bg-gray-50", text: "text-gray-800", border: "border-gray-200", label: p.status };
+                <>
+                  {/* Mobile Card List (< md) — tanpa horizontal clipping */}
+                  <div className="md:hidden divide-y divide-stone-100">
+                    {filteredPendaftar.map((p) => {
+                      const badge = STATUS_BADGE_MAP[p.status] || {
+                        bg: "bg-stone-100",
+                        text: "text-stone-700",
+                        border: "border-stone-200",
+                        label: p.status,
+                      };
+                      const { isLksa, jenjang } = getJalurAndJenjang(p);
+                      return (
+                        <div key={p.id} className="p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-mono text-[11px] font-bold text-stone-500">
+                                {p.nomor_registrasi || `PSB-${p.id}`}
+                              </p>
+                              <h3 className="font-bold text-sm text-stone-900">{p.nama_lengkap}</h3>
+                              <p className="text-xs text-stone-500 mt-0.5">
+                                {p.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki"} ·{" "}
+                                {p.asal_sekolah || "-"}
+                              </p>
+                            </div>
+                            <span
+                              className={`shrink-0 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
+                            >
+                              {badge.label}
+                            </span>
+                          </div>
 
-                        return (
-                          <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
-                            <td className="px-5 py-3.5 font-mono text-xs font-bold text-gray-700">
-                              {p.nomor_registrasi || `PSB-${p.id}`}
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="font-bold text-gray-900 block">{p.nama_lengkap}</span>
-                              <span className="text-xs text-gray-400">
-                                {p.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki"} {p.tempat_lahir ? `• ${p.tempat_lahir}` : ""} {p.tanggal_lahir ? `• ${p.tanggal_lahir}` : ""}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <div className="flex flex-col gap-1 items-start">
-                                {(p.jalur_pendaftaran || (p.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")) === "lksa" ? (
-                                  <span className="inline-block px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
-                                    ★ LKSA (Gratis)
-                                  </span>
-                                ) : (
-                                  <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                                    Reguler (MBS)
-                                  </span>
-                                )}
-                                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                  Tujuan: {p.jenjang_tujuan || (p.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP"}
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span
+                              className={`px-2 py-0.5 rounded font-bold border ${
+                                isLksa
+                                  ? "bg-amber-100 text-amber-900 border-amber-300"
+                                  : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                              }`}
+                            >
+                              {isLksa ? "LKSA (Gratis)" : "Reguler (MBS)"}
+                            </span>
+                            <span className="px-2 py-0.5 rounded font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              Tujuan: {jenjang}
+                            </span>
+                            <span className="text-stone-600 ml-auto font-mono">
+                              WA: {p.no_hp_wali || "-"}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedPendaftar(p);
+                                setCatatanVerifikasi(p.catatan_admin || "");
+                              }}
+                              className="flex-1 min-h-10 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white cursor-pointer"
+                              style={{ background: primaryColor }}
+                            >
+                              <Eye size={14} aria-hidden="true" />
+                              <span>Verifikasi Berkas</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deletePendaftar(p.id, p.nama_lengkap)}
+                              aria-label={`Hapus data ${p.nama_lengkap}`}
+                              className="min-h-10 min-w-10 inline-flex items-center justify-center rounded-xl text-red-600 bg-red-50 hover:bg-red-100 cursor-pointer"
+                            >
+                              <Trash2 size={16} aria-hidden="true" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Data Table (>= md) */}
+                  <div
+                    tabIndex={0}
+                    role="region"
+                    aria-label="Tabel Data Calon Santri Pendaftar"
+                    className="hidden md:block overflow-x-auto"
+                  >
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="bg-stone-50 border-b border-stone-200 text-xs text-stone-600 font-bold uppercase tracking-wider">
+                          <th scope="col" className="px-5 py-3.5">No. Registrasi</th>
+                          <th scope="col" className="px-5 py-3.5">Nama Calon Santri</th>
+                          <th scope="col" className="px-5 py-3.5">Jalur &amp; Jenjang</th>
+                          <th scope="col" className="px-5 py-3.5">Pendidikan Asal</th>
+                          <th scope="col" className="px-5 py-3.5">Wali &amp; WhatsApp</th>
+                          <th scope="col" className="px-5 py-3.5 text-center">Status</th>
+                          <th scope="col" className="px-5 py-3.5 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-stone-100">
+                        {filteredPendaftar.map((p) => {
+                          const badge = STATUS_BADGE_MAP[p.status] || {
+                            bg: "bg-stone-100",
+                            text: "text-stone-700",
+                            border: "border-stone-200",
+                            label: p.status,
+                          };
+                          const { isLksa, jenjang } = getJalurAndJenjang(p);
+
+                          return (
+                            <tr key={p.id} className="hover:bg-stone-50/70 transition-colors">
+                              <td className="px-5 py-3.5 font-mono text-xs font-bold text-stone-700 whitespace-nowrap">
+                                {p.nomor_registrasi || `PSB-${p.id}`}
+                              </td>
+                              <th scope="row" className="px-5 py-3.5 font-normal">
+                                <span className="font-bold text-stone-900 block">{p.nama_lengkap}</span>
+                                <span className="text-xs text-stone-500">
+                                  {p.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki"}
+                                  {p.tempat_lahir ? ` · ${p.tempat_lahir}` : ""}
+                                  {p.tanggal_lahir ? ` · ${formatDateIndo(p.tanggal_lahir)}` : ""}
                                 </span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="block text-gray-800 font-medium">{p.asal_sekolah || "-"}</span>
-                              <span className="text-xs text-gray-400">{p.jurusan || "Umum"}</span>
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="block font-medium text-gray-800">{p.nama_ayah || p.nama_ibu || "-"}</span>
-                              <span className="text-xs text-gray-500 font-mono">{p.no_hp_wali || "-"}</span>
-                            </td>
-                            <td className="px-5 py-3.5 text-center">
-                              <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
-                                {statusBadge.label}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3.5 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setSelectedPendaftar(p);
-                                    setCatatanVerifikasi(p.catatan_admin || "");
-                                  }}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white transition-all shadow-sm"
-                                  style={{ background: primaryColor }}
+                              </th>
+                              <td className="px-5 py-3.5">
+                                <div className="flex flex-col gap-1 items-start">
+                                  <span
+                                    className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold border ${
+                                      isLksa
+                                        ? "bg-amber-100 text-amber-900 border-amber-300"
+                                        : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                    }`}
+                                  >
+                                    {isLksa ? "LKSA (Gratis)" : "Reguler (MBS)"}
+                                  </span>
+                                  <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                    Tujuan: {jenjang}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <span className="block text-stone-800 font-medium">{p.asal_sekolah || "-"}</span>
+                                <span className="text-xs text-stone-500">{p.jurusan || "Umum"}</span>
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <span className="block font-medium text-stone-800">
+                                  {p.nama_ayah || p.nama_ibu || "-"}
+                                </span>
+                                <span className="text-xs text-stone-500 font-mono tabular-nums">
+                                  {p.no_hp_wali || "-"}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3.5 text-center">
+                                <span
+                                  className={`inline-block px-2.5 py-1 rounded-full text-xs font-bold border ${badge.bg} ${badge.text} ${badge.border}`}
                                 >
-                                  <Eye size={13} />
-                                  <span>Verifikasi</span>
-                                </button>
-                                <button
-                                  onClick={() => deletePendaftar(p.id, p.nama_lengkap)}
-                                  className="p-1.5 rounded-xl text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
-                                  title="Drop / Hapus Pendaftar Ini"
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                                  {badge.label}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3.5 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedPendaftar(p);
+                                      setCatatanVerifikasi(p.catatan_admin || "");
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-95 cursor-pointer"
+                                    style={{ background: primaryColor }}
+                                  >
+                                    <Eye size={13} aria-hidden="true" />
+                                    <span>Verifikasi</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => deletePendaftar(p.id, p.nama_lengkap)}
+                                    aria-label={`Hapus data ${p.nama_lengkap}`}
+                                    className="p-2 rounded-xl text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                  >
+                                    <Trash2 size={15} aria-hidden="true" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           </div>
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            TAB 2: KUSTOMISASI TAMPILAN WEB (LENGKAP)
-           ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 2: KUSTOMISASI TAMPILAN WEB */}
         {activeTab === "kustomisasi" && (
-          <div className="space-y-6">
-            {/* Status Message */}
-            {configMsg && (
-              <div className={`p-4 rounded-2xl text-sm font-semibold flex items-center justify-between border shadow-sm ${
-                configMsg.includes("berhasil")
-                  ? "bg-green-50 text-green-800 border-green-200"
-                  : "bg-red-50 text-red-800 border-red-200"
-              }`}>
-                <span>{configMsg}</span>
-                <button onClick={() => setConfigMsg("")} className="text-gray-400 hover:text-gray-600">
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Form Kolom Kiri & Tengah */}
-              <div className="lg:col-span-2 space-y-6">
-                
-                {/* 1. Identitas Pesantren */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border" style={{ borderColor: "#f0f0f0" }}>
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b" style={{ borderColor: "#f0f0f0" }}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: primaryColor }}>
-                      <BookOpen size={16} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-gray-900">1. Identitas Pondok Pesantren</h2>
-                      <p className="text-xs text-gray-500">Nama, moto, dan informasi umum yang tampil di landing page</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Nama Lengkap Pesantren *</label>
-                      <input
-                        type="text"
-                        value={config.nama_pesantren || ""}
-                        onChange={(e) => handleConfigChange("nama_pesantren", e.target.value)}
-                        placeholder="Contoh: Pondok Pesantren Muhammadiyah Bangsri"
-                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Nama Singkat / Panggilan</label>
-                      <input
-                        type="text"
-                        value={config.nama_singkat || ""}
-                        onChange={(e) => handleConfigChange("nama_singkat", e.target.value)}
-                        placeholder="Contoh: PP Muhammadiyah Bangsri"
-                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Tahun Berdiri</label>
-                      <input
-                        type="text"
-                        value={config.tahun_berdiri || ""}
-                        onChange={(e) => handleConfigChange("tahun_berdiri", e.target.value)}
-                        placeholder="Contoh: 1985"
-                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Tagline / Moto Pesantren</label>
-                      <input
-                        type="text"
-                        value={config.tagline || ""}
-                        onChange={(e) => handleConfigChange("tagline", e.target.value)}
-                        placeholder="Contoh: Mencetak Generasi Qur'ani, Berakhlak Mulia & Berwawasan Global"
-                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Deskripsi Profil Singkat</label>
-                      <textarea
-                        rows={3}
-                        value={config.deskripsi || ""}
-                        onChange={(e) => handleConfigChange("deskripsi", e.target.value)}
-                        placeholder="Deskripsi singkat mengenai keunggulan, visi, dan misi pondok pesantren..."
-                        className="w-full border rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Jumlah Santri Aktif (Display)</label>
-                      <input
-                        type="text"
-                        value={config.jumlah_santri || ""}
-                        onChange={(e) => handleConfigChange("jumlah_santri", e.target.value)}
-                        placeholder="Contoh: 1200+"
-                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Program Pendidikan (Pisah koma)</label>
-                      <input
-                        type="text"
-                        value={config.program_pendidikan || ""}
-                        onChange={(e) => handleConfigChange("program_pendidikan", e.target.value)}
-                        placeholder="Contoh: Tahfidz 30 Juz, MTs, MA, Kitab Kuning"
-                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Tema & Branding Warna */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border" style={{ borderColor: "#f0f0f0" }}>
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b" style={{ borderColor: "#f0f0f0" }}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: primaryColor }}>
-                      <Palette size={16} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-gray-900">2. Tema Warna & Branding</h2>
-                      <p className="text-xs text-gray-500">Sesuaikan palet warna agar identik dengan logo & seragam pesantren</p>
-                    </div>
-                  </div>
-
-                  {/* ── Paket Harmoni Tema Siap Pakai (1-Klik) ── */}
-                  <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-gray-50 to-gray-100/70 border border-gray-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Sparkles size={16} className="text-amber-500" />
-                        <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider">
-                          ⚡ Rekomendasi Paket Tema Harmonis (1-Klik Primer & Aksen)
-                        </h3>
-                      </div>
-                      <span className="text-[11px] text-gray-400 hidden sm:inline">Klik tema untuk memasang warna serasi</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {THEME_PRESETS.map((t) => {
-                        const isSelected = (config.warna_primer === t.primer) && (config.warna_aksen === t.aksen);
-                        return (
-                          <button
-                            key={t.name}
-                            type="button"
-                            onClick={() => {
-                              handleConfigChange("warna_primer", t.primer);
-                              handleConfigChange("warna_aksen", t.aksen);
-                            }}
-                            className={`p-2.5 rounded-xl border text-left transition-all hover:scale-[1.02] flex flex-col justify-between ${
-                              isSelected
-                                ? "bg-white border-green-600 shadow-md ring-2 ring-green-600/30"
-                                : "bg-white/90 border-gray-200 hover:bg-white hover:border-gray-300 shadow-sm"
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <span className="w-5 h-5 rounded-full shadow-sm border border-black/10 inline-block shrink-0" style={{ background: t.primer }} title="Primer" />
-                              <span className="w-3.5 h-3.5 rounded-full shadow-sm border border-black/10 inline-block shrink-0" style={{ background: t.aksen }} title="Aksen" />
-                            </div>
-                            <span className="text-[11px] font-bold text-gray-900 leading-tight block truncate">{t.name}</span>
-                            <span className="text-[10px] text-gray-400 block mt-0.5 truncate">{t.desc}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* ── Live Mini Preview Swatch ── */}
-                  <div
-                    className="mb-6 p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-all shadow-sm"
-                    style={{ background: `linear-gradient(135deg, ${config.warna_primer || "#0f4c1e"}, #0a3315)`, color: "#ffffff" }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-md shrink-0"
-                        style={{ background: config.warna_aksen || "#c8a84b", color: config.warna_primer || "#0f4c1e" }}
-                      >
-                        PSB
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider block" style={{ color: config.warna_aksen || "#c8a84b" }}>
-                          Live Preview Hasil Warna
-                        </span>
-                        <h4 className="text-sm font-extrabold text-white">
-                          {config.nama_pesantren || "Pesantren Anda"} — Tampilan Banner & Tombol
-                        </h4>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-3.5 py-1.5 rounded-full text-xs font-extrabold shadow-sm" style={{ background: config.warna_aksen || "#c8a84b", color: config.warna_primer || "#0f4c1e" }}>
-                        Daftar Sekarang
-                      </span>
-                      <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/20 text-white border border-white/30">
-                        Gelombang Buka
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {/* Warna Primer */}
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-2">Warna Primer (Warna Utama)</label>
-                      <div className="flex items-center gap-3 mb-3">
-                        <input
-                          type="color"
-                          value={config.warna_primer || "#0f4c1e"}
-                          onChange={(e) => handleConfigChange("warna_primer", e.target.value)}
-                          className="w-12 h-12 rounded-xl cursor-pointer border p-1"
-                          style={{ borderColor: "#e5e7eb" }}
-                        />
-                        <div>
-                          <input
-                            type="text"
-                            value={config.warna_primer || "#0f4c1e"}
-                            onChange={(e) => handleConfigChange("warna_primer", e.target.value)}
-                            className="font-mono text-xs font-bold border rounded-lg px-2.5 py-1.5 w-28 uppercase"
-                            style={{ borderColor: "#e5e7eb" }}
-                          />
-                          <span className="block text-[11px] text-gray-400 mt-1">Header, tombol, navbar</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5">
-                        {COLOR_PRESETS_PRIMARY.map((p) => (
-                          <button
-                            key={p.hex}
-                            type="button"
-                            onClick={() => handleConfigChange("warna_primer", p.hex)}
-                            className="text-[11px] px-2 py-1 rounded-md border flex items-center gap-1.5 hover:bg-gray-50"
-                            style={{ borderColor: "#e5e7eb" }}
-                          >
-                            <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: p.hex }} />
-                            <span>{p.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Warna Aksen */}
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-2">Warna Aksen (Highlight & Badge)</label>
-                      <div className="flex items-center gap-3 mb-3">
-                        <input
-                          type="color"
-                          value={config.warna_aksen || "#c8a84b"}
-                          onChange={(e) => handleConfigChange("warna_aksen", e.target.value)}
-                          className="w-12 h-12 rounded-xl cursor-pointer border p-1"
-                          style={{ borderColor: "#e5e7eb" }}
-                        />
-                        <div>
-                          <input
-                            type="text"
-                            value={config.warna_aksen || "#c8a84b"}
-                            onChange={(e) => handleConfigChange("warna_aksen", e.target.value)}
-                            className="font-mono text-xs font-bold border rounded-lg px-2.5 py-1.5 w-28 uppercase"
-                            style={{ borderColor: "#e5e7eb" }}
-                          />
-                          <span className="block text-[11px] text-gray-400 mt-1">Badge, bintang, highlight</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5">
-                        {COLOR_PRESETS_ACCENT.map((p) => (
-                          <button
-                            key={p.hex}
-                            type="button"
-                            onClick={() => handleConfigChange("warna_aksen", p.hex)}
-                            className="text-[11px] px-2 py-1 rounded-md border flex items-center gap-1.5 hover:bg-gray-50"
-                            style={{ borderColor: "#e5e7eb" }}
-                          >
-                            <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: p.hex }} />
-                            <span>{p.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* URL Logo & Hero Banner */}
-                    <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t" style={{ borderColor: "#f0f0f0" }}>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">URL Logo Pesantren</label>
-                        <input
-                          type="text"
-                          value={config.logo_url || ""}
-                          onChange={(e) => handleConfigChange("logo_url", e.target.value)}
-                          placeholder="https://... atau /logo.png"
-                          className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                          style={{ borderColor: "#e5e7eb" }}
-                        />
-                        <span className="text-[11px] text-gray-400 block mt-1">Mendukung link Google Drive, Supabase, atau URL gambar</span>
-                        {config.logo_url && (
-                          <div className="mt-2 flex items-center gap-2 p-2 bg-gray-50 rounded-xl border border-gray-100">
-                            <img
-                              src={toDirectImageUrl(config.logo_url)}
-                              alt="Preview Logo"
-                              referrerPolicy="no-referrer"
-                              className="w-8 h-8 object-contain rounded border bg-white p-0.5"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = "https://placehold.co/100x100?text=Error";
-                              }}
-                            />
-                            <span className="text-xs text-gray-500 font-medium">Preview Logo Berhasil Dimuat</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-1.5">URL Foto Hero Banner</label>
-                        <input
-                          type="text"
-                          value={config.hero_bg_url || ""}
-                          onChange={(e) => handleConfigChange("hero_bg_url", e.target.value)}
-                          placeholder="https://.../banner-pesantren.jpg"
-                          className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                          style={{ borderColor: "#e5e7eb" }}
-                        />
-                        <span className="text-[11px] text-gray-400 block mt-1">Foto pemandangan pesantren untuk background hero (bisa Google Drive)</span>
-                        {config.hero_bg_url && (
-                          <div className="mt-2 flex items-center gap-2.5 p-2 bg-gray-50 rounded-xl border border-gray-100">
-                            <img
-                              src={toDirectImageUrl(config.hero_bg_url)}
-                              alt="Preview Hero Banner"
-                              referrerPolicy="no-referrer"
-                              className="w-16 h-9 object-cover rounded-lg border bg-white"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = "https://placehold.co/160x90?text=Error";
-                              }}
-                            />
-                            <span className="text-xs text-gray-500 font-medium">Preview Banner Hero</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Kontak & Media Sosial */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border" style={{ borderColor: "#f0f0f0" }}>
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b" style={{ borderColor: "#f0f0f0" }}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: primaryColor }}>
-                      <Phone size={16} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-gray-900">3. Kontak Panitia & Lokasi</h2>
-                      <p className="text-xs text-gray-500">Nomor WhatsApp konsultasi pendaftaran dan lokasi pesantren</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Nomor WhatsApp Panitia PSB *</label>
-                      <div className="relative">
-                        <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="text"
-                          value={config.no_wa_admin || ""}
-                          onChange={(e) => handleConfigChange("no_wa_admin", e.target.value)}
-                          placeholder="Contoh: 081234567890 atau 6281234567890"
-                          className="w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                          style={{ borderColor: "#e5e7eb" }}
-                        />
-                      </div>
-                      <span className="text-[11px] text-gray-400 block mt-1">Tombol WA melayang di web akan langsung chat ke nomor ini</span>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Email Resmi PSB</label>
-                      <div className="relative">
-                        <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="email"
-                          value={config.email || ""}
-                          onChange={(e) => handleConfigChange("email", e.target.value)}
-                          placeholder="psb@pesantren.sch.id"
-                          className="w-full border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                          style={{ borderColor: "#e5e7eb" }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Alamat Lengkap Pesantren</label>
-                      <div className="relative">
-                        <MapPin size={15} className="absolute left-3.5 top-3 text-gray-400" />
-                        <textarea
-                          rows={2}
-                          value={config.alamat || ""}
-                          onChange={(e) => handleConfigChange("alamat", e.target.value)}
-                          placeholder="Jl. Raya Pesantren No. 1, Desa/Kelurahan, Kecamatan, Kabupaten/Kota, Provinsi"
-                          className="w-full border rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                          style={{ borderColor: "#e5e7eb" }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-bold text-gray-700">
-                          Kode / Link Embed Google Maps (Peta Lokasi Pesantren)
-                        </label>
-                        <span className="text-[11px] font-medium text-gray-400">
-                          Mendukung kode &lt;iframe&gt; atau link embed
-                        </span>
-                      </div>
-                      
-                      <textarea
-                        rows={3}
-                        value={config.maps_embed_url || ""}
-                        onChange={(e) => handleConfigChange("maps_embed_url", e.target.value)}
-                        placeholder={'Tempel (Paste) kode lengkap dari Google Maps di sini, contoh:\n<iframe src="https://www.google.com/maps/embed?pb=..." width="600" height="450" ...></iframe>'}
-                        className="w-full border rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50 font-mono leading-relaxed"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-
-                      {/* Status Deteksi Format */}
-                      {(() => {
-                        const status = getMapsInputStatus(config.maps_embed_url);
-                        if (status.type === "iframe") {
-                          return (
-                            <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800">
-                              <CheckCircle2 size={15} className="shrink-0 text-green-600" />
-                              <span><strong>Kode &lt;iframe&gt; terdeteksi:</strong> Kode valid! Sistem otomatis mengekstrak peta ini untuk ditampilkan di website.</span>
-                            </div>
-                          );
-                        }
-                        if (status.type === "embed_url") {
-                          return (
-                            <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-xl text-xs text-green-800">
-                              <CheckCircle2 size={15} className="shrink-0 text-green-600" />
-                              <span><strong>Link Embed valid:</strong> Peta resmi Google Maps siap ditampilkan.</span>
-                            </div>
-                          );
-                        }
-                        if (status.type === "shortlink") {
-                          return (
-                            <div className="mt-2 flex items-start gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
-                              <AlertTriangle size={15} className="shrink-0 text-amber-600 mt-0.5" />
-                              <div>
-                                <strong>Perhatian (Share Link Terdeteksi):</strong> Google Maps melarang link pendek <em>(maps.app.goo.gl)</em> ditampilkan di dalam website (ditolak oleh browser). Agar peta tampil, gunakan menu <strong>Bagikan &gt; Sematkan peta (Embed a map) &gt; Salin HTML</strong> seperti panduan di bawah.
-                              </div>
-                            </div>
-                          );
-                        }
-                        return (
-                          <p className="text-[11px] text-gray-400 mt-1">
-                            💡 <em>Jika dikosongkan, sistem secara otomatis menampilkan peta lokasi Google Maps berdasarkan Nama &amp; Alamat Pesantren.</em>
-                          </p>
-                        );
-                      })()}
-
-                      {/* Panduan Singkat Cara Salin Embed dari Google Maps */}
-                      <div className="mt-2.5 p-3 bg-gray-50 rounded-xl border border-gray-200/70 text-[11px] text-gray-600 space-y-1">
-                        <div className="font-bold text-gray-700 flex items-center gap-1.5">
-                          <HelpCircle size={13} className="text-gray-500" />
-                          <span>Cara Mengambil Kode Embed Google Maps yang Benar:</span>
-                        </div>
-                        <ol className="list-decimal list-inside space-y-0.5 pl-1 text-gray-500">
-                          <li>Buka <strong>Google Maps</strong> di browser/komputer lalu cari lokasi pesantren Anda.</li>
-                          <li>Klik tombol <strong>Bagikan (Share)</strong> di sebelah kiri.</li>
-                          <li>Pilih tab <strong>Sematkan peta (Embed a map)</strong> (jangan pilih tab "Kirim link").</li>
-                          <li>Klik tombol <strong>SALIN HTML</strong>, lalu langsung tempelkan (Paste) di kotak di atas.</li>
-                        </ol>
-                      </div>
-
-                      {/* Live Interactive Map Preview in Admin */}
-                      <div className="mt-3 border rounded-2xl p-3 bg-white shadow-sm" style={{ borderColor: "#e5e7eb" }}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                            <MapPin size={14} style={{ color: primaryColor }} />
-                            <span>Pratinjau Tampilan Peta Langsung:</span>
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-                            {config.maps_embed_url ? "Peta Kustom Aktif" : "Pencarian Otomatis Aktif"}
-                          </span>
-                        </div>
-                        <div className="w-full h-48 rounded-xl overflow-hidden border border-gray-200 bg-gray-100">
-                          <iframe
-                            src={parseGoogleMapsEmbedUrl(
-                              config.maps_embed_url,
-                              (config.nama_pesantren || "Pondok Pesantren") + ", " + (config.alamat || "Bangsri, Jepara")
-                            )}
-                            className="w-full h-full border-0"
-                            loading="lazy"
-                            title="Pratinjau Peta Lokasi"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-gray-700 mb-1.5">Link Video Profil YouTube (Opsional)</label>
-                      <input
-                        type="text"
-                        value={config.video_profil_url || ""}
-                        onChange={(e) => handleConfigChange("video_profil_url", e.target.value)}
-                        placeholder="Contoh: https://www.youtube.com/watch?v=..."
-                        className="w-full border rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50"
-                        style={{ borderColor: "#e5e7eb" }}
-                      />
-                      <span className="text-[11px] text-gray-400 block mt-1">Mendukung link YouTube biasa, youtu.be, atau kode embed iframe</span>
-                      {config.video_profil_url && (
-                        <div className="mt-2 flex items-center gap-2.5 p-2 bg-gray-50 rounded-xl border border-gray-100">
-                          {parseMediaUrl(config.video_profil_url).thumbnailUrl ? (
-                            <img
-                              src={parseMediaUrl(config.video_profil_url).thumbnailUrl}
-                              alt="Preview Video"
-                              referrerPolicy="no-referrer"
-                              className="w-16 h-9 object-cover rounded-lg border bg-white"
-                            />
-                          ) : null}
-                          <span className="text-xs text-gray-500 font-medium">Video YouTube Berhasil Dikenali</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Kustomisasi Teks & Judul Tiap Bagian */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border" style={{ borderColor: "#f0f0f0" }}>
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b" style={{ borderColor: "#f0f0f0" }}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: primaryColor }}>
-                      <Palette size={16} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-gray-900">4. Teks, Judul & Kalimat Penjelas Bagian Web</h2>
-                      <p className="text-xs text-gray-500">Sesuaikan judul, badge, dan kalimat penjelas di setiap bagian website</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-5">
-                    {/* A. Bagian Program Unggulan */}
-                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
-                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Program Unggulan</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Atas</label>
-                          <input
-                            type="text"
-                            value={config.program_badge || ""}
-                            onChange={(e) => handleConfigChange("program_badge", e.target.value)}
-                            placeholder="Default: Keunggulan Kami"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Utama</label>
-                          <input
-                            type="text"
-                            value={config.program_judul || ""}
-                            onChange={(e) => handleConfigChange("program_judul", e.target.value)}
-                            placeholder="Default: Program Unggulan"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Penjelasan / Deskripsi di Bawah Judul</label>
-                          <textarea
-                            rows={2}
-                            value={config.program_deskripsi || ""}
-                            onChange={(e) => handleConfigChange("program_deskripsi", e.target.value)}
-                            placeholder="Default: Kami menyediakan program terbaik untuk membentuk generasi yang berilmu, berakhlak, dan berdaya saing global."
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                          <span className="text-[10px] text-gray-400 block mt-0.5">Penjelasan visi keunggulan yang tampil tepat di bawah tulisan Program Unggulan</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* B. Bagian Profil / Tentang Pesantren */}
-                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
-                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Profil & Tentang Pesantren</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Atas</label>
-                          <input
-                            type="text"
-                            value={config.tentang_badge || ""}
-                            onChange={(e) => handleConfigChange("tentang_badge", e.target.value)}
-                            placeholder="Default: Profil & Visi"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Bagian</label>
-                          <input
-                            type="text"
-                            value={config.tentang_judul || ""}
-                            onChange={(e) => handleConfigChange("tentang_judul", e.target.value)}
-                            placeholder="Default: Tentang {Nama Pesantren}"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Label Daftar Program</label>
-                          <input
-                            type="text"
-                            value={config.tentang_program_label || ""}
-                            onChange={(e) => handleConfigChange("tentang_program_label", e.target.value)}
-                            placeholder="Default: Program Pendidikan yang Diselenggarakan:"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* C. Bagian Galeri */}
-                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
-                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Galeri Santri</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Atas</label>
-                          <input
-                            type="text"
-                            value={config.galeri_badge || ""}
-                            onChange={(e) => handleConfigChange("galeri_badge", e.target.value)}
-                            placeholder="Default: Galeri"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Utama</label>
-                          <input
-                            type="text"
-                            value={config.galeri_judul || ""}
-                            onChange={(e) => handleConfigChange("galeri_judul", e.target.value)}
-                            placeholder="Default: Kehidupan di Pesantren"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Keterangan / Sub-judul (Opsional)</label>
-                          <input
-                            type="text"
-                            value={config.galeri_deskripsi || ""}
-                            onChange={(e) => handleConfigChange("galeri_deskripsi", e.target.value)}
-                            placeholder="Contoh: Dokumentasi sarana, fasilitas, dan kegiatan santri sehari-hari"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* D. Bagian Gelombang PSB & Tombol */}
-                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
-                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Gelombang PSB & Tombol Aksi</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Gelombang</label>
-                          <input
-                            type="text"
-                            value={config.gelombang_badge || ""}
-                            onChange={(e) => handleConfigChange("gelombang_badge", e.target.value)}
-                            placeholder="Default: Jadwal Pendaftaran"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Gelombang</label>
-                          <input
-                            type="text"
-                            value={config.gelombang_judul || ""}
-                            onChange={(e) => handleConfigChange("gelombang_judul", e.target.value)}
-                            placeholder="Default: Gelombang Penerimaan Santri Baru"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Teks Tombol Daftar (Hero)</label>
-                          <input
-                            type="text"
-                            value={config.hero_cta_daftar || ""}
-                            onChange={(e) => handleConfigChange("hero_cta_daftar", e.target.value)}
-                            placeholder="Default: Daftar Sekarang"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Teks Tombol Video (Hero)</label>
-                          <input
-                            type="text"
-                            value={config.hero_cta_video || ""}
-                            onChange={(e) => handleConfigChange("hero_cta_video", e.target.value)}
-                            placeholder="Default: Tonton Video Profil"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* E. Bagian Lokasi & Kunjungan */}
-                    <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/40 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ background: accentColor }} />
-                        <h3 className="font-bold text-xs uppercase tracking-wider text-gray-700">Bagian Lokasi & Kunjungan</h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Atas</label>
-                          <input
-                            type="text"
-                            value={config.lokasi_badge || ""}
-                            onChange={(e) => handleConfigChange("lokasi_badge", e.target.value)}
-                            placeholder="Default: Lokasi & Kunjungan"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Judul Utama</label>
-                          <input
-                            type="text"
-                            value={config.lokasi_judul || ""}
-                            onChange={(e) => handleConfigChange("lokasi_judul", e.target.value)}
-                            placeholder="Default: Lokasi Pondok Pesantren"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Kalimat Penjelas di Bawah Judul</label>
-                          <textarea
-                            rows={2}
-                            value={config.lokasi_deskripsi || ""}
-                            onChange={(e) => handleConfigChange("lokasi_deskripsi", e.target.value)}
-                            placeholder="Default: Silakan berkunjung langsung ke sekretariat PSB untuk konsultasi program, survei asrama, atau verifikasi berkas pendaftaran santri baru."
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Badge Kartu Info</label>
-                          <input
-                            type="text"
-                            value={config.lokasi_card_badge || ""}
-                            onChange={(e) => handleConfigChange("lokasi_card_badge", e.target.value)}
-                            placeholder="Default: Sekretariat PSB"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Jam Pelayanan PSB</label>
-                          <input
-                            type="text"
-                            value={config.jam_layanan || ""}
-                            onChange={(e) => handleConfigChange("jam_layanan", e.target.value)}
-                            placeholder="Default: Senin - Sabtu: 08.00 - 15.00 WIB"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Keterangan Hari Libur</label>
-                          <input
-                            type="text"
-                            value={config.lokasi_jam_keterangan || ""}
-                            onChange={(e) => handleConfigChange("lokasi_jam_keterangan", e.target.value)}
-                            placeholder="Default: Ahad & Hari Libur: Dengan Konfirmasi Panitia"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-gray-600 mb-1">Teks Tombol Petunjuk Arah</label>
-                          <input
-                            type="text"
-                            value={config.lokasi_cta_arah || ""}
-                            onChange={(e) => handleConfigChange("lokasi_cta_arah", e.target.value)}
-                            placeholder="Default: Petunjuk Arah Google Maps ↗"
-                            className="w-full border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. Syarat & Ketentuan Formulir PSB */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border" style={{ borderColor: "#f0f0f0" }}>
-                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b" style={{ borderColor: "#f0f0f0" }}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white" style={{ background: primaryColor }}>
-                      <FileCheck size={16} />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-gray-900">5. Syarat & Ketentuan Formulir PSB</h2>
-                      <p className="text-xs text-gray-500">Ketentuan resmi pendaftaran yang tampil dan wajib disetujui calon santri / wali di form pendaftaran</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      Poin-poin Persyaratan & Ketentuan (Tulis satu poin per baris)
-                    </label>
-                    <textarea
-                      rows={8}
-                      value={config.syarat_ketentuan || ""}
-                      onChange={(e) => handleConfigChange("syarat_ketentuan", e.target.value)}
-                      placeholder="Contoh:&#10;1. Calon santri beragama Islam dan berakhlak mulia.&#10;2. Berijazah / lulus jenjang sebelumnya (SD/MI untuk SMP, SMP/MTs untuk SMA/SMK).&#10;3. Mengisi data formulir pendaftaran dengan benar dan jujur.&#10;4. Melampirkan berkas Pas Foto, Kartu Keluarga, dan Akta Kelahiran (format JPG/PNG/PDF maks 1MB).&#10;5. Khusus pendaftar santri LKSA (Gratis), wajib melampirkan Surat Keterangan Tidak Mampu (SKTM).&#10;6. Bersedia mentaati seluruh tata tertib pesantren dan sekolah."
-                      className="w-full border rounded-xl p-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-green-400 bg-gray-50/50 font-mono leading-relaxed"
-                      style={{ borderColor: "#e5e7eb" }}
-                    />
-                    <p className="text-[11px] text-gray-400 mt-1.5">
-                      💡 <strong>Tips:</strong> Jika dikosongkan, form pendaftaran akan otomatis menggunakan 8 butir syarat standar sistem. Anda dapat merinci syarat khusus pesantren Anda di sini.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Save Button Bar */}
-                <div className="sticky bottom-4 z-20 bg-white/95 backdrop-blur p-4 rounded-2xl shadow-lg border flex items-center justify-between gap-4" style={{ borderColor: "#e5e7eb" }}>
-                  <div className="text-xs text-gray-500 hidden sm:block">
-                    Perubahan akan langsung terlihat di landing page web PSB setelah disimpan.
-                  </div>
-                  <button
-                    type="button"
-                    onClick={saveConfig}
-                    disabled={savingConfig}
-                    className="w-full sm:w-auto px-8 py-3 rounded-xl font-bold text-sm text-white shadow-md transition-all flex items-center justify-center gap-2 hover:scale-[1.02] disabled:opacity-50"
-                    style={{ background: `linear-gradient(135deg, ${primaryColor}, #1a6b2b)` }}
-                  >
-                    <Save size={17} />
-                    <span>{savingConfig ? "Menyimpan..." : "💾 Simpan Kustomisasi Web"}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Kolom Kanan: Live Preview Card */}
-              <div className="space-y-6">
-                <div className="bg-white rounded-2xl p-5 shadow-sm border sticky top-24" style={{ borderColor: "#f0f0f0" }}>
-                  <div className="flex items-center gap-2 mb-3 pb-2 border-b" style={{ borderColor: "#f0f0f0" }}>
-                    <Sparkles size={16} style={{ color: accentColor }} />
-                    <h3 className="font-bold text-sm text-gray-900">Simulasi Tampilan Landing Page</h3>
-                  </div>
-
-                  {/* Mock Navbar Preview */}
-                  <div className="rounded-xl overflow-hidden border shadow-sm" style={{ borderColor: "#e5e7eb" }}>
-                    <div className="p-3 text-white flex items-center justify-between" style={{ background: primaryColor }}>
-                      <div className="flex items-center gap-2">
-                        {config.logo_url ? (
-                          <img src={toDirectImageUrl(config.logo_url)} alt="Logo" referrerPolicy="no-referrer" className="w-6 h-6 object-contain rounded bg-white/20" onError={(e) => { (e.target as HTMLElement).style.display = "none"; }} />
-                        ) : (
-                          <div className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold" style={{ background: accentColor, color: primaryColor }}>
-                            P
-                          </div>
-                        )}
-                        <span className="font-extrabold text-xs truncate max-w-[150px]">
-                          {config.nama_singkat || config.nama_pesantren || "Pesantren Anda"}
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: accentColor, color: primaryColor }}>
-                        Daftar
-                      </span>
-                    </div>
-
-                    {/* Mock Hero Preview */}
-                    <div className="p-4 text-center text-white relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${primaryColor}ee, #083310)` }}>
-                      <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-2 border" style={{ borderColor: `${accentColor}80`, color: accentColor }}>
-                        PSB TA 2026/2027
-                      </span>
-                      <h4 className="font-black text-sm mb-1 leading-snug">
-                        {config.nama_pesantren || "Pondok Pesantren Al-Ikhlas"}
-                      </h4>
-                      <p className="text-[11px] text-white/80 line-clamp-2 mb-3">
-                        {config.tagline || "Mencetak Generasi Qur'ani, Berakhlak Mulia & Mandiri"}
-                      </p>
-
-                      <div className="flex justify-center gap-2">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold shadow-sm" style={{ background: accentColor, color: primaryColor }}>
-                          Daftar Sekarang
-                        </span>
-                        <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-white/20 text-white">
-                          Cek Status
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Mock Info Bar */}
-                    <div className="p-3 bg-gray-50 text-[11px] space-y-1.5 text-gray-600">
-                      <div className="flex items-center gap-1.5">
-                        <Phone size={11} className="text-green-600 shrink-0" />
-                        <span className="truncate">{config.no_wa_admin || "081234567890"}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <MapPin size={11} className="text-red-500 shrink-0" />
-                        <span className="truncate">{config.alamat || "Indonesia"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11.5px] text-amber-800 leading-relaxed">
-                    💡 <strong>Tips:</strong> Setelah menekan tombol <em>"Simpan Kustomisasi Web"</em>, buka tombol <strong>"Lihat Website Publik"</strong> di pojok kanan atas untuk melihat hasil tampilan di internet secara langsung!
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <KustomisasiTab
+            config={config}
+            onChange={handleConfigChange}
+            onSave={saveConfig}
+            saving={savingConfig}
+            msg={configMsg}
+            onClearMsg={() => setConfigMsg("")}
+          />
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            TAB 3: GELOMBANG PENDAFTARAN
-           ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 3: GELOMBANG PSB */}
         {activeTab === "gelombang" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border flex items-center justify-between flex-wrap gap-4" style={{ borderColor: "#f0f0f0" }}>
-              <div>
-                <h2 className="text-base font-bold text-gray-900">Jadwal & Gelombang Penerimaan Santri Baru</h2>
-                <p className="text-xs text-gray-500">Atur tanggal buka, tutup, kuota santri, dan biaya pendaftaran per gelombang</p>
-              </div>
-              <button
-                onClick={() => setShowGelombangForm(!showGelombangForm)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm"
-                style={{ background: primaryColor }}
-              >
-                <Plus size={16} />
-                <span>{showGelombangForm ? "Tutup Form" : "Tambah Gelombang Baru"}</span>
-              </button>
-            </div>
-
-            {/* Form Tambah Gelombang */}
-            {showGelombangForm && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-green-200" style={{ borderColor: "#bbf7d0" }}>
-                <h3 className="font-bold text-sm text-gray-900 mb-4 pb-2 border-b">Form Tambah Gelombang PSB</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nama Gelombang *</label>
-                    <input
-                      type="text"
-                      value={gelombangForm.nama}
-                      onChange={(e) => setGelombangForm({ ...gelombangForm, nama: e.target.value })}
-                      placeholder="Contoh: Gelombang 2 - Jalur Reguler"
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Kuota Santri</label>
-                    <input
-                      type="number"
-                      value={gelombangForm.kuota}
-                      onChange={(e) => setGelombangForm({ ...gelombangForm, kuota: e.target.value })}
-                      placeholder="Contoh: 150"
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Tanggal Buka *</label>
-                    <input
-                      type="date"
-                      value={gelombangForm.tanggal_buka}
-                      onChange={(e) => setGelombangForm({ ...gelombangForm, tanggal_buka: e.target.value })}
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Tanggal Tutup *</label>
-                    <input
-                      type="date"
-                      value={gelombangForm.tanggal_tutup}
-                      onChange={(e) => setGelombangForm({ ...gelombangForm, tanggal_tutup: e.target.value })}
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Biaya Pendaftaran (Rp)</label>
-                    <input
-                      type="number"
-                      value={gelombangForm.biaya_pendaftaran}
-                      onChange={(e) => setGelombangForm({ ...gelombangForm, biaya_pendaftaran: e.target.value })}
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                  <div className="sm:col-span-2 md:col-span-3">
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Keterangan / Persyaratan Khusus</label>
-                    <input
-                      type="text"
-                      value={gelombangForm.keterangan}
-                      onChange={(e) => setGelombangForm({ ...gelombangForm, keterangan: e.target.value })}
-                      placeholder="Contoh: Termasuk seragam, modul, dan tes seleksi"
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
-                  <button
-                    onClick={() => setShowGelombangForm(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={saveGelombang}
-                    className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
-                    style={{ background: primaryColor }}
-                  >
-                    Simpan Gelombang
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* List Gelombang */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {gelombangList.map((g) => (
-                <div key={g.id} className="bg-white rounded-2xl p-5 shadow-sm border flex flex-col justify-between" style={{ borderColor: "#f0f0f0" }}>
-                  <div>
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <h3 className="font-bold text-base text-gray-900">{g.nama}</h3>
-                      <button
-                        onClick={() => toggleGelombang(g.id, g.is_aktif)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all ${
-                          g.is_aktif
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {g.is_aktif ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
-                        <span>{g.is_aktif ? "Aktif (Buka)" : "Tutup"}</span>
-                      </button>
-                    </div>
-
-                    <div className="space-y-1.5 text-xs text-gray-600 mb-3">
-                      <div><strong>Jadwal:</strong> {g.tanggal_buka} s/d {g.tanggal_tutup}</div>
-                      <div><strong>Kuota:</strong> {g.kuota ? `${g.kuota} Santri` : "Tidak Dibatasi"}</div>
-                      <div><strong>Biaya:</strong> Rp {Number(g.biaya_pendaftaran || 0).toLocaleString("id-ID")}</div>
-                      {g.keterangan && <div className="text-gray-400 italic mt-1">{g.keterangan}</div>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <GelombangTab
+            token={token}
+            primaryColor={primaryColor}
+            items={gelombangList}
+            onRefresh={fetchGelombang}
+          />
         )}
 
-        {/* ═══════════════════════════════════════════════════════════════════
-            TAB 4: GALERI FOTO PESANTREN
-           ═══════════════════════════════════════════════════════════════════ */}
+        {/* TAB 4: GALERI FOTO */}
         {activeTab === "galeri" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border flex items-center justify-between flex-wrap gap-4" style={{ borderColor: "#f0f0f0" }}>
-              <div>
-                <h2 className="text-base font-bold text-gray-900">Kelola Foto Galeri Pesantren</h2>
-                <p className="text-xs text-gray-500">Foto sarana, asrama, masjid, dan kegiatan santri yang tampil di halaman utama</p>
-              </div>
-              <button
-                onClick={() => setShowGaleriForm(!showGaleriForm)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm"
-                style={{ background: primaryColor }}
-              >
-                <Plus size={16} />
-                <span>{showGaleriForm ? "Tutup Form" : "Tambah Foto Baru"}</span>
-              </button>
-            </div>
-
-            {/* Form Tambah Galeri */}
-            {showGaleriForm && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-green-200">
-                <h3 className="font-bold text-sm text-gray-900 mb-4 pb-2 border-b">Upload / Tambah Foto Galeri</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Judul Foto *</label>
-                    <input
-                      type="text"
-                      value={galeriForm.judul}
-                      onChange={(e) => setGaleriForm({ ...galeriForm, judul: e.target.value })}
-                      placeholder="Contoh: Gedung Asrama Santri Putra"
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nomor Urutan Tampil</label>
-                    <input
-                      type="number"
-                      value={galeriForm.urutan}
-                      onChange={(e) => setGaleriForm({ ...galeriForm, urutan: e.target.value })}
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 mb-1">URL Foto *</label>
-                    <input
-                      type="text"
-                      value={galeriForm.foto_url}
-                      onChange={(e) => setGaleriForm({ ...galeriForm, foto_url: e.target.value })}
-                      placeholder="https://images.unsplash.com/... atau URL foto hosting"
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Deskripsi Singkat</label>
-                    <input
-                      type="text"
-                      value={galeriForm.deskripsi}
-                      onChange={(e) => setGaleriForm({ ...galeriForm, deskripsi: e.target.value })}
-                      placeholder="Keterangan foto kegiatan atau sarana..."
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
-                  <button
-                    onClick={() => setShowGaleriForm(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    onClick={saveGaleri}
-                    className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
-                    style={{ background: primaryColor }}
-                  >
-                    Simpan Foto
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Grid Galeri */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {galeriList.map((g) => {
-                const media = parseMediaUrl(g.foto_url);
-                return (
-                  <div key={g.id} className="bg-white rounded-2xl overflow-hidden shadow-sm border flex flex-col justify-between" style={{ borderColor: "#f0f0f0" }}>
-                    <div className="h-44 bg-gray-100 relative group overflow-hidden">
-                      <img
-                        src={media.thumbnailUrl}
-                        alt={g.judul || "Foto Galeri"}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "https://placehold.co/400x300/e2e8f0/64748b?text=Galeri";
-                        }}
-                      />
-                      {media.type === "youtube" && (
-                        <div className="absolute top-2 left-2 bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow">
-                          <span>▶ YouTube</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4 flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-sm text-gray-900 leading-tight truncate">{g.judul || "(Tanpa Judul)"}</h4>
-                        {g.deskripsi && <p className="text-xs text-gray-400 mt-1 line-clamp-1">{g.deskripsi}</p>}
-                      </div>
-                      <button
-                        onClick={() => deleteGaleri(g.id)}
-                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 transition-colors shrink-0"
-                        title="Hapus Foto / Video"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <GaleriTab
+            token={token}
+            primaryColor={primaryColor}
+            items={galeriList}
+            onRefresh={fetchGaleri}
+          />
         )}
 
-        {/* ═══ TAB 5: PROGRAM UNGGULAN ═══ */}
+        {/* TAB 5: PROGRAM UNGGULAN */}
         {activeTab === "program" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border flex items-center justify-between flex-wrap gap-4" style={{ borderColor: "#f0f0f0" }}>
-              <div>
-                <h2 className="text-base font-bold text-gray-900">Kelola Program Unggulan</h2>
-                <p className="text-xs text-gray-500">Program yang tampil di halaman utama website — bisa diaktifkan/nonaktifkan kapan saja</p>
-              </div>
-              <button onClick={() => setShowProgramForm(!showProgramForm)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm"
-                style={{ background: primaryColor }}>
-                <Plus size={16} />
-                <span>{showProgramForm ? "Tutup Form" : "Tambah Program Baru"}</span>
-              </button>
-            </div>
-
-            {showProgramForm && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-green-200">
-                <h3 className="font-bold text-sm text-gray-900 mb-4 pb-2 border-b">Tambah Program Unggulan Baru</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nama Program *</label>
-                    <input type="text" value={programForm.nama} onChange={(e) => setProgramForm({...programForm, nama: e.target.value})}
-                      placeholder="Contoh: Tahfidz Al-Quran" className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Nomor Urutan Tampil</label>
-                    <input type="number" value={programForm.urutan} onChange={(e) => setProgramForm({...programForm, urutan: e.target.value})}
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Deskripsi Singkat</label>
-                    <textarea rows={2} value={programForm.deskripsi} onChange={(e) => setProgramForm({...programForm, deskripsi: e.target.value})}
-                      placeholder="Jelaskan keunggulan program ini secara singkat..."
-                      className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-2">Pilih Ikon Emoji</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {ICON_PRESETS.map(ic => (
-                        <button key={ic} onClick={() => setProgramForm({...programForm, icon: ic})}
-                          className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center border-2 transition-all ${programForm.icon === ic ? "border-green-600 bg-green-50 scale-110" : "border-gray-200 hover:border-gray-400"}`}>{ic}</button>
-                      ))}
-                    </div>
-                    <input type="text" value={programForm.icon} onChange={(e) => setProgramForm({...programForm, icon: e.target.value})}
-                      placeholder="Atau ketik emoji sendiri..." className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Warna Kartu</label>
-                    <div className="flex items-center gap-3">
-                      <input type="color" value={programForm.warna} onChange={(e) => setProgramForm({...programForm, warna: e.target.value})}
-                        className="w-10 h-10 rounded-lg border cursor-pointer" />
-                      <div className="flex flex-wrap gap-2">
-                        {["#0f4c1e","#1e3a8a","#7c3aed","#b91c1c","#c8a84b","#0891b2"].map(c => (
-                          <button key={c} onClick={() => setProgramForm({...programForm, warna: c})}
-                            className="w-7 h-7 rounded-full border-2 transition-transform hover:scale-110"
-                            style={{ background: c, borderColor: programForm.warna === c ? "#111" : "transparent" }} />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">{programForm.warna}</p>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
-                  <button onClick={() => setShowProgramForm(false)} className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200">Batal</button>
-                  <button onClick={async () => {
-                    if (!programForm.nama.trim()) return alert("Nama program wajib diisi!");
-                    const r = await fetch("/api/program", { method: "POST", headers: {"Content-Type":"application/json", "Authorization": `Bearer ${token}`}, body: JSON.stringify({...programForm, urutan: parseInt(programForm.urutan)||99}) });
-                    const d = await r.json();
-                    if (d.ok) { setProgramList(prev => [...prev, d.data].sort((a,b)=>a.urutan-b.urutan)); setProgramForm({nama:"",deskripsi:"",icon:"⭐",warna:"#0f4c1e",urutan:"1"}); setShowProgramForm(false); }
-                    else alert("Gagal: " + d.error);
-                  }} className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm" style={{ background: primaryColor }}>
-                    Simpan Program
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {loadingProgram ? (
-              <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto" style={{ borderColor: primaryColor }} /></div>
-            ) : programList.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-2xl border" style={{ borderColor: "#f0f0f0" }}>
-                <div className="text-5xl mb-3">📚</div>
-                <p className="font-bold text-gray-700">Belum ada program unggulan</p>
-                <p className="text-sm text-gray-400 mt-1">Klik tombol di atas untuk menambah program</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {programList.map((prog) => (
-                  <div key={prog.id}
-                    className={`bg-white rounded-2xl p-5 shadow-sm border flex flex-col gap-3 ${prog.is_aktif ? "" : "opacity-60"}`}
-                    style={{ borderColor: "#f0f0f0", borderLeft: `4px solid ${prog.warna}` }}>
-                    <div className="flex items-start gap-3">
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ background: `${prog.warna}15` }}>{prog.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-sm text-gray-900 leading-tight truncate">{prog.nama}</h4>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${prog.is_aktif ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {prog.is_aktif ? "✓ Aktif" : "Nonaktif"}
-                        </span>
-                      </div>
-                    </div>
-                    {prog.deskripsi && <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{prog.deskripsi}</p>}
-                    <div className="flex gap-2 pt-2 border-t">
-                      <button onClick={async () => {
-                        const r = await fetch("/api/program", { method: "PUT", headers:{"Content-Type":"application/json", "Authorization": `Bearer ${token}`}, body: JSON.stringify({id: prog.id, is_aktif: !prog.is_aktif}) });
-                        const d = await r.json();
-                        if (d.ok) setProgramList(prev => prev.map(p => p.id === prog.id ? {...p, is_aktif: !p.is_aktif} : p));
-                      }} className="flex-1 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                      style={{ background: prog.is_aktif ? "#fef9c3" : "#dcfce7", color: prog.is_aktif ? "#a16207" : "#15803d" }}>
-                        {prog.is_aktif ? "Nonaktifkan" : "Aktifkan"}
-                      </button>
-                      <button onClick={async () => {
-                        if (!confirm(`Hapus program "${prog.nama}"?`)) return;
-                        const r = await fetch("/api/program", { method: "DELETE", headers:{"Content-Type":"application/json", "Authorization": `Bearer ${token}`}, body: JSON.stringify({id: prog.id}) });
-                        const d = await r.json();
-                        if (d.ok) setProgramList(prev => prev.filter(p => p.id !== prog.id));
-                      }} className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <ProgramTab
+            token={token}
+            primaryColor={primaryColor}
+            items={programList}
+            loading={loadingProgram}
+            onSetItems={setProgramList}
+          />
         )}
-
       </main>
 
-      {/* ─── Modal Verifikasi Pendaftar ─── */}
-      {selectedPendaftar && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between pb-3 border-b mb-4">
-              <h3 className="font-extrabold text-base text-gray-900">Verifikasi Berkas Calon Santri</h3>
-              <button onClick={() => setSelectedPendaftar(null)} className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
+      {/* ─── Modal Verifikasi Berkas Pendaftar (Native <dialog> Top Layer + Sticky Footer) ─── */}
+      <ModalDialog
+        open={Boolean(selectedPendaftar)}
+        onClose={() => setSelectedPendaftar(null)}
+        labelledBy="modal-verifikasi-title"
+        className="w-full max-w-xl"
+      >
+        {selectedPendaftar && selectedMeta && (
+          <div className="bg-white rounded-2xl shadow-2xl border border-stone-200 flex flex-col max-h-[90dvh] overflow-hidden">
+            {/* Modal Sticky Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-stone-200 shrink-0">
+              <h2 id="modal-verifikasi-title" className="font-bold text-base text-stone-900">
+                Verifikasi Berkas Calon Santri
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSelectedPendaftar(null)}
+                aria-label="Tutup modal verifikasi"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-stone-100 cursor-pointer"
+              >
+                <X size={18} aria-hidden="true" />
               </button>
             </div>
 
-            <div className="space-y-4 text-xs">
-              <div className="bg-gray-50 p-4 rounded-xl space-y-1.5">
+            {/* Modal Scrollable Body */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+              <div className="bg-stone-50 p-4 rounded-xl border border-stone-200/80 space-y-1.5">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="font-mono text-xs font-bold text-green-800">
+                  <span className="font-mono text-xs font-bold text-emerald-900">
                     {selectedPendaftar.nomor_registrasi || `PSB-${selectedPendaftar.id}`}
                   </span>
                   <div className="flex items-center gap-1.5">
-                    {((selectedPendaftar.jalur_pendaftaran || (selectedPendaftar.catatan_admin?.includes("LKSA") ? "lksa" : "reguler")) === "lksa") ? (
-                      <span className="px-2 py-0.5 rounded text-[11px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
-                        ★ Jalur LKSA (Gratis)
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                        Jalur Reguler (MBS)
-                      </span>
-                    )}
+                    <span
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                        selectedMeta.isLksa
+                          ? "bg-amber-100 text-amber-900 border-amber-300"
+                          : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                      }`}
+                    >
+                      {selectedMeta.isLksa ? "Jalur LKSA (Gratis)" : "Jalur Reguler (MBS)"}
+                    </span>
                     <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                      Tujuan: {selectedPendaftar.jenjang_tujuan || (selectedPendaftar.catatan_admin?.match(/\[Jenjang:\s*(\w+)\]/i)?.[1]) || "SMP"}
+                      Tujuan: {selectedMeta.jenjang}
                     </span>
                   </div>
                 </div>
 
-                <div className="text-sm font-black text-gray-900 pt-1">{selectedPendaftar.nama_lengkap}</div>
-                <div><strong>Jenis Kelamin:</strong> {selectedPendaftar.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki"}</div>
-                <div><strong>TTL:</strong> {selectedPendaftar.tempat_lahir || "-"}, {selectedPendaftar.tanggal_lahir || "-"}</div>
-                <div><strong>Asal Sekolah:</strong> {selectedPendaftar.asal_sekolah || "-"}</div>
-                <div><strong>Peminatan/Jurusan:</strong> {selectedPendaftar.jurusan || "Umum"}</div>
-                <div><strong>Orang Tua / Wali:</strong> {selectedPendaftar.nama_ayah || selectedPendaftar.nama_ibu || "-"}</div>
-                <div><strong>Rata-rata Gaji / Penghasilan Ortu:</strong> <span className="font-semibold text-emerald-800">{selectedPendaftar.penghasilan_orang_tua || selectedPendaftar.catatan_admin?.match(/\[Gaji:\s*([^\]]+)\]/i)?.[1] || "-"}</span></div>
-                <div><strong>WhatsApp:</strong> {selectedPendaftar.no_hp_wali || "-"}</div>
-                <div><strong>Alamat:</strong> {selectedPendaftar.alamat || "-"}</div>
+                <div className="text-sm font-bold text-stone-900 pt-1">
+                  {selectedPendaftar.nama_lengkap}
+                </div>
+                <div>
+                  <strong>Jenis Kelamin:</strong>{" "}
+                  {selectedPendaftar.jenis_kelamin === "P" ? "Perempuan" : "Laki-laki"}
+                </div>
+                <div>
+                  <strong>TTL:</strong> {selectedPendaftar.tempat_lahir || "-"},{" "}
+                  {formatDateIndo(selectedPendaftar.tanggal_lahir)}
+                </div>
+                <div>
+                  <strong>Asal Sekolah:</strong> {selectedPendaftar.asal_sekolah || "-"}
+                </div>
+                <div>
+                  <strong>Peminatan/Jurusan:</strong> {selectedPendaftar.jurusan || "Umum"}
+                </div>
+                <div>
+                  <strong>Orang Tua / Wali:</strong>{" "}
+                  {selectedPendaftar.nama_ayah || selectedPendaftar.nama_ibu || "-"}
+                </div>
+                <div>
+                  <strong>Penghasilan Ortu:</strong>{" "}
+                  <span className="font-semibold text-emerald-800">
+                    {formatGajiRp(selectedMeta.gaji)}
+                  </span>
+                </div>
+                <div>
+                  <strong>WhatsApp:</strong> {selectedPendaftar.no_hp_wali || "-"}
+                </div>
+                <div>
+                  <strong>Alamat:</strong> {selectedPendaftar.alamat || "-"}
+                </div>
               </div>
 
-              {/* Berkas Dokumen yang Diunggah */}
-              <div className="border rounded-xl p-3.5 bg-white space-y-2" style={{ borderColor: "#e5e7eb" }}>
-                <h4 className="font-bold text-gray-800 text-xs">Berkas Dokumen yang Diunggah:</h4>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="p-2 rounded-lg bg-gray-50 border text-xs flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <FileText size={14} className="text-gray-500 shrink-0" />
-                      <span className="truncate">Pas Foto (3x4)</span>
+              <div className="border border-stone-200 rounded-xl p-3.5 bg-white space-y-2.5">
+                <h3 className="font-bold text-stone-800 text-xs">Berkas Dokumen yang Diunggah</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { label: "Pas Foto (3x4)", url: selectedPendaftar.foto_url, highlight: false },
+                    { label: "Kartu Keluarga", url: selectedPendaftar.kk_url, highlight: false },
+                    {
+                      label: "Akta Kelahiran",
+                      url: selectedPendaftar.akta_url || selectedPendaftar.ijazah_url,
+                      highlight: false,
+                    },
+                    {
+                      label: "SKTM (LKSA)",
+                      url: selectedPendaftar.sktm_url,
+                      highlight: selectedMeta.isLksa,
+                    },
+                  ].map((doc) => (
+                    <div
+                      key={doc.label}
+                      className={`p-2.5 rounded-lg border text-xs flex items-center justify-between gap-2 ${
+                        doc.highlight
+                          ? "bg-amber-50/70 border-amber-300"
+                          : "bg-stone-50 border-stone-200"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <FileText size={14} className="text-stone-500 shrink-0" aria-hidden="true" />
+                        <span className="truncate font-medium text-stone-800">{doc.label}</span>
+                      </div>
+                      {doc.url ? (
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-0.5 text-blue-700 hover:underline font-bold shrink-0"
+                        >
+                          <span>Lihat</span>
+                          <ArrowUpRight size={12} aria-hidden="true" />
+                        </a>
+                      ) : (
+                        <span className="text-stone-400 shrink-0">Kosong</span>
+                      )}
                     </div>
-                    {selectedPendaftar.foto_url ? (
-                      <a href={selectedPendaftar.foto_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold shrink-0 ml-1">
-                        Lihat ↗
-                      </a>
-                    ) : <span className="text-gray-400 shrink-0 ml-1">Kosong</span>}
-                  </div>
-
-                  <div className="p-2 rounded-lg bg-gray-50 border text-xs flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <FileText size={14} className="text-gray-500 shrink-0" />
-                      <span className="truncate">Kartu Keluarga</span>
-                    </div>
-                    {selectedPendaftar.kk_url ? (
-                      <a href={selectedPendaftar.kk_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold shrink-0 ml-1">
-                        Lihat ↗
-                      </a>
-                    ) : <span className="text-gray-400 shrink-0 ml-1">Kosong</span>}
-                  </div>
-
-                  <div className="p-2 rounded-lg bg-gray-50 border text-xs flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <FileText size={14} className="text-gray-500 shrink-0" />
-                      <span className="truncate">Akta Kelahiran</span>
-                    </div>
-                    {(selectedPendaftar.akta_url || selectedPendaftar.ijazah_url) ? (
-                      <a href={selectedPendaftar.akta_url || selectedPendaftar.ijazah_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold shrink-0 ml-1">
-                        Lihat ↗
-                      </a>
-                    ) : <span className="text-gray-400 shrink-0 ml-1">Kosong</span>}
-                  </div>
-
-                  <div className={`p-2 rounded-lg border text-xs flex items-center justify-between ${
-                    (selectedPendaftar.jalur_pendaftaran === "lksa" || selectedPendaftar.catatan_admin?.includes("LKSA"))
-                      ? "bg-amber-50/70 border-amber-300"
-                      : "bg-gray-50"
-                  }`}>
-                    <div className="flex items-center gap-1.5 truncate">
-                      <FileText size={14} className={(selectedPendaftar.jalur_pendaftaran === "lksa" || selectedPendaftar.catatan_admin?.includes("LKSA")) ? "text-amber-700 shrink-0" : "text-gray-500 shrink-0"} />
-                      <span className="truncate font-semibold">SKTM (LKSA)</span>
-                    </div>
-                    {selectedPendaftar.sktm_url ? (
-                      <a href={selectedPendaftar.sktm_url} target="_blank" rel="noopener noreferrer" className="text-amber-900 font-extrabold hover:underline shrink-0 ml-1 bg-amber-100 px-1.5 py-0.5 rounded">
-                        Lihat SKTM ↗
-                      </a>
-                    ) : (
-                      <span className="text-gray-400 shrink-0 ml-1">
-                        {(selectedPendaftar.jalur_pendaftaran === "lksa" || selectedPendaftar.catatan_admin?.includes("LKSA")) ? "Belum upload" : "-"}
-                      </span>
-                    )}
-                  </div>
+                  ))}
                 </div>
               </div>
 
               <div>
-                <label className="block font-bold text-gray-700 mb-1">Catatan Verifikasi Panitia</label>
+                <label htmlFor="catatan-verifikasi" className="block font-bold text-stone-700 mb-1.5">
+                  Catatan Verifikasi Panitia
+                </label>
                 <textarea
+                  id="catatan-verifikasi"
                   rows={2}
                   value={catatanVerifikasi}
                   onChange={(e) => setCatatanVerifikasi(e.target.value)}
-                  placeholder="Catatan hasil seleksi berkas, jadwal tes wawancara, dsb..."
-                  className="w-full border rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-green-400"
+                  placeholder="Catatan hasil seleksi berkas, jadwal wawancara..."
+                  className="w-full border border-stone-300 rounded-xl p-3 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
               </div>
+            </div>
 
-              <div className="pt-3 border-t flex items-center justify-between gap-2">
+            {/* Modal Sticky Footer */}
+            <div className="px-5 py-3.5 border-t border-stone-200 bg-stone-50 flex flex-wrap items-center justify-between gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => deletePendaftar(selectedPendaftar.id, selectedPendaftar.nama_lengkap)}
+                className="min-h-9 px-3 py-1.5 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 size={14} aria-hidden="true" />
+                <span>Hapus</span>
+              </button>
+
+              <div className="flex flex-wrap items-center gap-2 ml-auto">
                 <button
                   type="button"
-                  onClick={() => deletePendaftar(selectedPendaftar.id, selectedPendaftar.nama_lengkap)}
-                  className="px-3 py-2 rounded-xl text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 flex items-center gap-1.5 transition-colors"
-                  title="Hapus data calon santri ini secara permanen"
+                  onClick={() => setSelectedPendaftar(null)}
+                  className="min-h-9 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-stone-700 bg-white border border-stone-300 hover:bg-stone-100 cursor-pointer"
                 >
-                  <Trash2 size={14} />
-                  <span>Hapus / Drop Data</span>
+                  Tutup
                 </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPendaftar(null)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200"
-                  >
-                    Tutup
-                  </button>
                 <button
                   type="button"
                   disabled={updatingStatus}
                   onClick={() => updateStatus(selectedPendaftar.id, "ditolak")}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200"
+                  className="min-h-9 px-3.5 py-1.5 rounded-xl text-xs font-bold text-red-700 bg-red-100 hover:bg-red-200 disabled:opacity-60 cursor-pointer"
                 >
-                  Tolak Pendaftaran
+                  Tolak
                 </button>
                 <button
                   type="button"
                   disabled={updatingStatus}
                   onClick={() => updateStatus(selectedPendaftar.id, "diterima")}
-                  className="px-5 py-2 rounded-xl text-xs font-bold text-white shadow-sm hover:opacity-95"
+                  className="min-h-9 px-4 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-60 cursor-pointer"
                   style={{ background: "#15803d" }}
                 >
-                  ✓ Terima Santri Ini
+                  Terima Santri
                 </button>
-                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </ModalDialog>
     </div>
   );
 }
 
-
 export default function AdminDashboard() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-800" /></div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-stone-50">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-800" />
+        </div>
+      }
+    >
       <AdminDashboardContent />
     </Suspense>
   );

@@ -70,7 +70,6 @@ async function getGaleri() {
   }
 }
 
-
 async function getPengajar() {
   try {
     const admin = createAdminClient();
@@ -91,17 +90,26 @@ export default async function HomePage() {
   ]);
 
   return (
-    <main>
+    <div className="min-h-screen flex flex-col">
+      <a href="#main-content" className="skip-link">
+        Lewati ke konten utama
+      </a>
       <Navbar config={config} />
-      <HeroSection config={config} gelombang={gelombang} />
-      <TentangSection config={config} />
-      <ProgramSection programs={programs} config={config} />
-      <PengajarSection pengajar={pengajar} config={config} />
-      <GelombangSection gelombang={gelombang} config={config} />
-      <GaleriSection galeri={galeri} config={config} />
-      <LokasiSection config={config} />
-      <WhatsAppButton noWa={config.no_wa_admin} />
+      <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
+        <HeroSection config={config} gelombang={gelombang} galeri={galeri} />
+        <TentangSection config={config} />
+        <ProgramSection programs={programs} config={config} />
+        <PengajarSection pengajar={pengajar} config={config} />
+        <GelombangSection gelombang={gelombang} config={config} />
+        <GaleriSection galeri={galeri} config={config} />
+        <LokasiSection config={config} />
+      </main>
+      <WhatsAppButton
+        noWa={config.no_wa_admin}
+        label={config.wa_tombol_teks}
+        defaultMessage={config.wa_pesan_default}
+      />
       <Footer config={config} />
-    </main>
+    </div>
   );
 }

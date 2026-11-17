@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
-const font = Plus_Jakarta_Sans({
+const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-jakarta",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+  display: "swap",
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -83,7 +92,7 @@ export async function generateMetadata(): Promise<Metadata> {
       icons: {
         icon: [
           { url: logoUrl },
-          { url: "/favicon.ico" }
+          { url: "/favicon.ico" },
         ],
         shortcut: [logoUrl],
         apple: [logoUrl],
@@ -125,12 +134,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={font.variable}>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-      </head>
-      <body className={`${font.variable} antialiased`}>{children}</body>
+    <html lang="id" className={`${jakarta.variable} ${playfair.variable}`}>
+      <body className="font-sans antialiased bg-[#faf8f4] text-[#161d18] selection:bg-emerald-900/15 selection:text-emerald-950">
+        {children}
+      </body>
     </html>
   );
 }

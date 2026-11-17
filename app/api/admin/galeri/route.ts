@@ -26,6 +26,28 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  try {
+    verifyToken(req);
+    const body = await req.json();
+    const { id, ...updates } = body;
+    if (!id) throw new Error("ID galeri diperlukan.");
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("galeri")
+      .update(updates)
+      .eq("id", Number(id))
+      .select()
+      .single();
+    if (error) throw error;
+    revalidatePath("/");
+    revalidatePath("/admin/dashboard");
+    return NextResponse.json({ ok: true, data });
+  } catch (e: unknown) {
+    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : "Error" });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     verifyToken(req);

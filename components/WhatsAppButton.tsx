@@ -1,20 +1,38 @@
 "use client";
 import { MessageCircle } from "lucide-react";
 
-export default function WhatsAppButton({ noWa }: { noWa?: string }) {
+interface WhatsAppButtonProps {
+  noWa?: string;
+  label?: string;
+  defaultMessage?: string;
+}
+
+export default function WhatsAppButton({
+  noWa,
+  label,
+  defaultMessage,
+}: WhatsAppButtonProps) {
   if (!noWa) return null;
   const wa = noWa.replace(/\D/g, "");
-  const msg = encodeURIComponent("Assalamualaikum, saya ingin mengetahui informasi Penerimaan Santri Baru.");
+  if (!wa) return null;
+  const msg = encodeURIComponent(
+    defaultMessage || "Assalamualaikum, saya ingin mengetahui informasi Penerimaan Santri Baru."
+  );
+
   return (
     <a
       href={`https://wa.me/${wa}?text=${msg}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full text-white font-semibold text-sm shadow-2xl transition-all hover:scale-105"
-      style={{ background: "linear-gradient(135deg, #25D366, #1da851)", boxShadow: "0 6px 25px rgba(37,211,102,0.5)" }}
+      aria-label="Hubungi panitia PSB melalui WhatsApp"
+      className="fixed bottom-5 right-5 z-30 inline-flex items-center gap-2 min-h-11 px-4 py-2.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform duration-200 hover:-translate-y-0.5"
+      style={{
+        backgroundColor: "#15803d",
+        boxShadow: "0 10px 25px -8px rgba(21, 128, 61, 0.55)",
+      }}
     >
-      <MessageCircle size={20} fill="white" />
-      <span className="hidden sm:inline">Hubungi Kami</span>
+      <MessageCircle size={19} aria-hidden="true" />
+      <span className="hidden sm:inline">{label || "Konsultasi PSB"}</span>
     </a>
   );
 }

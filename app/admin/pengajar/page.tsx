@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Plus, Trash2, Save, User, Edit2, Award, ToggleLeft, ToggleRight, X, Upload, Sparkles, Crop
+  ArrowLeft, Plus, Trash2, Save, User, Edit2, Award, ToggleLeft, ToggleRight, X, Upload, Sparkles, Crop, Search, ImageOff
 } from "lucide-react";
 import Link from "next/link";
 import { formatNamaGelar } from "@/components/PengajarSection";
@@ -39,7 +39,7 @@ const INITIAL_FORM: Pengajar = {
 
 export default function AdminPengajar() {
   const router = useRouter();
-  const token = typeof window !== "undefined" ? localStorage.getItem("psb_admin_token") : null;
+  const [token, setToken] = useState<string | null>(null);
 
   const [list, setList] = useState<Pengajar[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +48,9 @@ export default function AdminPengajar() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
+  const [filterKategori, setFilterKategori] = useState<"semua" | "pimpinan" | "pengajar">("semua");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [previewErr, setPreviewErr] = useState(false);
 
   // State untuk Crop Modal Ala Media Sosial
   const [cropModalOpen, setCropModalOpen] = useState(false);
@@ -55,15 +58,21 @@ export default function AdminPengajar() {
   const [quickCropTeacher, setQuickCropTeacher] = useState<Pengajar | null>(null);
 
   useEffect(() => {
-    if (!token) { router.push("/admin/login"); return; }
-    fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+    const t = localStorage.getItem("psb_admin_token");
+    if (!t) {
+      router.push("/admin/login");
+      return;
+    }
+    setToken(t);
+    fetchData(t);
+  }, [router]);
 
-  const fetchData = async () => {
+  const fetchData = async (authToken?: string) => {
+    const t = authToken || token;
+    if (!t) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/pengajar", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch("/api/admin/pengajar", { headers: { Authorization: `Bearer ${t}` } });
       const d = await res.json();
       if (d.ok) setList(d.data || []);
     } finally { setLoading(false); }
@@ -208,34 +217,130 @@ export default function AdminPengajar() {
   const primary = "#0f4c1e";
   const accent = "#c8a84b";
 
+  const filteredList = list.filter((p) => {
+    if (filterKategori === "pimpinan" && !p.is_pimpinan) return false;
+    if (filterKategori === "pengajar" && p.is_pimpinan) return false;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      formatNamaGelar(p).toLowerCase().includes(q) ||
+      (p.jabatan && p.jabatan.toLowerCase().includes(q)) ||
+      (p.bidang_studi && p.bidang_studi.toLowerCase().includes(q))
+    );
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b px-6 py-4 flex items-center gap-4" style={{ borderColor: "#e0e0e0" }}>
-        <Link href="/admin/dashboard" className="text-gray-400 hover:text-gray-600"><ArrowLeft size={20} /></Link>
-        <div className="flex-1">
-          <h1 className="font-extrabold text-lg" style={{ color: primary }}>Manajemen Pengajar & Pimpinan</h1>
-          <p className="text-xs text-gray-400">Kelola data pengajar dan pimpinan yang tampil di website</p>
+    <div className="min-h-screen bg-stone-50">
+      <header className="bg-white border-b border-stone-200 sticky top-0 z-30 px-4 sm:px-6 py-3.5 shadow-xs">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Link
+              href="/admin/dashboard"
+              aria-label="Kembali ke Dashboard Admin"
+              className="w-10 h-10 rounded-xl border border-stone-200 flex items-center justify-center text-stone-600 hover:bg-stone-100 hover:text-stone-900 shrink-0 transition-colors"
+            >
+              <ArrowLeft size={18} aria-hidden="true" />
+            </Link>
+            <div className="min-w-0">
+              <h1 className="font-bold text-base sm:text-lg truncate" style={{ color: primary }}>
+                Dewan Pengajar &amp; Pimpinan
+              </h1>
+              <p className="text-[11px] sm:text-xs text-stone-500 truncate">
+                {list.length} profil terdaftar · Kelola tampilan kartu website
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowForm(true);
+              setEditId(null);
+              setPreviewErr(false);
+              setForm({ ...INITIAL_FORM, urutan: list.length + 1 });
+              setMsg("");
+            }}
+            className="inline-flex items-center gap-1.5 min-h-10 px-3.5 sm:px-4 py-2 rounded-xl text-white text-xs sm:text-sm font-bold shadow-xs hover:opacity-95 shrink-0 cursor-pointer"
+            style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}
+          >
+            <Plus size={16} aria-hidden="true" />
+            <span>Tambah</span>
+            <span className="hidden sm:inline">Pengajar</span>
+          </button>
         </div>
-        <button
-          onClick={() => { setShowForm(true); setEditId(null); setForm(INITIAL_FORM); setMsg(""); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90"
-          style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}
-        >
-          <Plus size={16} /> Tambah Pengajar
-        </button>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
         {msg && (
-          <div className={`text-sm rounded-xl px-4 py-3 mb-4 ${msg.includes("berhasil") ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>{msg}</div>
+          <div
+            role="status"
+            className={`text-sm font-medium rounded-xl px-4 py-3 mb-4 flex items-center justify-between border ${
+              msg.includes("berhasil")
+                ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                : "bg-red-50 text-red-700 border-red-200"
+            }`}
+          >
+            <span>{msg}</span>
+            <button type="button" onClick={() => setMsg("")} aria-label="Tutup pesan" className="cursor-pointer">
+              <X size={15} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        {/* Filter & Pencarian Pengajar */}
+        {!showForm && list.length > 0 && (
+          <search className="bg-white rounded-2xl border border-stone-200 p-3.5 mb-5 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between shadow-xs">
+            <div className="relative flex-1">
+              <label htmlFor="cari-pengajar" className="sr-only">
+                Cari nama, jabatan, atau bidang studi pengajar
+              </label>
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" aria-hidden="true" />
+              <input
+                id="cari-pengajar"
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari nama asatidz, jabatan, atau bidang..."
+                className="w-full min-h-10 border border-stone-300 rounded-xl pl-9 pr-4 py-2 text-sm text-stone-900 bg-stone-50/50 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+            </div>
+            <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
+              {[
+                { id: "semua" as const, label: "Semua" },
+                { id: "pimpinan" as const, label: "Pimpinan" },
+                { id: "pengajar" as const, label: "Asatidz" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFilterKategori(item.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                    filterKategori === item.id
+                      ? "bg-white text-stone-900 shadow-xs"
+                      : "text-stone-600 hover:text-stone-900"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </search>
         )}
 
         {/* Form Modal / Box */}
         {showForm && (
-          <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6" style={{ borderColor: "#f0f0f0" }}>
+          <div className="bg-white rounded-2xl shadow-xs border border-stone-200 p-5 sm:p-6 mb-6">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold text-base text-gray-900">{editId ? "Edit Data Pengajar" : "Tambah Pengajar Baru"}</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+              <h2 className="font-bold text-base text-stone-900">
+                {editId ? "Edit Data Pengajar" : "Tambah Pengajar Baru"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                aria-label="Tutup form pengajar"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-stone-100 cursor-pointer"
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -406,25 +511,26 @@ export default function AdminPengajar() {
 
                 {/* Pratinjau Foto Terpasang */}
                 {form.foto_url && (
-                  <div className="mt-4 pt-4 border-t border-emerald-200/80 flex items-center justify-between flex-wrap gap-3 bg-white p-3.5 rounded-xl border border-gray-100 shadow-xs">
+                  <div className="mt-4 pt-4 border-t border-emerald-200/80 flex items-center justify-between flex-wrap gap-3 bg-white p-3.5 rounded-xl border border-stone-200 shadow-xs">
                     <div className="flex items-center gap-3 min-w-0">
-                      <img
-                        src={form.foto_url}
-                        alt="Preview"
-                        className="w-16 h-20 rounded-xl object-cover object-center border-2 border-emerald-500 shadow-sm shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "https://placehold.co/150x200?text=Foto+Error";
-                        }}
-                      />
+                      {!previewErr ? (
+                        <img
+                          src={form.foto_url}
+                          alt="Preview"
+                          className="w-16 h-20 rounded-xl object-cover object-center border-2 border-emerald-500 shadow-sm shrink-0"
+                          onError={() => setPreviewErr(true)}
+                        />
+                      ) : (
+                        <div className="w-16 h-20 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 shrink-0">
+                          <ImageOff size={20} aria-hidden="true" />
+                        </div>
+                      )}
                       <div className="min-w-0">
-                        <span className="font-bold text-xs text-emerald-900 flex items-center gap-1">
-                          ✓ Foto Terpasang & Siap Tampil
+                        <span className="font-bold text-xs text-emerald-900 block">
+                          {previewErr ? "Foto tidak dapat dimuat" : "Foto Terpasang & Siap Tampil"}
                         </span>
-                        <span className="text-[11px] text-gray-400 truncate block max-w-xs sm:max-w-md">
+                        <span className="text-[11px] text-stone-400 truncate block max-w-xs sm:max-w-md">
                           {form.foto_url}
-                        </span>
-                        <span className="text-[10px] text-emerald-600 font-medium">
-                          Tampil rapi dan presisi di kartu landing page.
                         </span>
                       </div>
                     </div>
@@ -432,10 +538,10 @@ export default function AdminPengajar() {
                     <button
                       type="button"
                       onClick={handleOpenCropForCurrent}
-                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-xs shrink-0"
+                      className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-xs shrink-0 cursor-pointer"
                     >
-                      <Crop size={14} className="text-emerald-700" />
-                      Atur Ulang / Crop Foto Ini
+                      <Crop size={14} className="text-emerald-700" aria-hidden="true" />
+                      <span>Atur Ulang / Crop</span>
                     </button>
                   </div>
                 )}
@@ -443,96 +549,144 @@ export default function AdminPengajar() {
 
               {/* Urutan */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-gray-700">Urutan Tampil</label>
+                <label htmlFor="pengajar-urutan" className="text-xs font-bold text-stone-700">
+                  Urutan Tampil
+                </label>
                 <input
+                  id="pengajar-urutan"
                   type="number"
                   min={1}
+                  max={999}
                   value={form.urutan}
-                  onChange={e => setF("urutan", Number(e.target.value))}
-                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+                  onChange={e => setF("urutan", Math.max(1, Number(e.target.value) || 1))}
+                  className="border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   style={{ borderColor: "#e5e7eb" }}
                 />
               </div>
 
               {/* Checkboxes */}
               <div className="sm:col-span-3 flex flex-wrap items-center gap-6 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
-                  <input type="checkbox" checked={form.is_pimpinan} onChange={e => setF("is_pimpinan", e.target.checked)} className="w-4 h-4 rounded" />
-                  <Award size={15} style={{ color: accent }} /> Tandai sebagai Pimpinan Pondok
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-stone-700">
+                  <input type="checkbox" checked={form.is_pimpinan} onChange={e => setF("is_pimpinan", e.target.checked)} className="w-4 h-4 accent-emerald-700 rounded" />
+                  <Award size={15} style={{ color: accent }} aria-hidden="true" /> Tandai sebagai Pimpinan Pondok
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700">
-                  <input type="checkbox" checked={form.is_aktif} onChange={e => setF("is_aktif", e.target.checked)} className="w-4 h-4 rounded" />
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-stone-700">
+                  <input type="checkbox" checked={form.is_aktif} onChange={e => setF("is_aktif", e.target.checked)} className="w-4 h-4 accent-emerald-700 rounded" />
                   Tampilkan di website
                 </label>
               </div>
             </div>
 
-            <div className="flex gap-3 mt-5 pt-4 border-t" style={{ borderColor: "#f0f0f0" }}>
+            <div className="flex gap-3 mt-5 pt-4 border-t border-stone-100">
               <button
+                type="button"
                 onClick={save}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm hover:opacity-90 disabled:opacity-60"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold shadow-xs hover:opacity-95 disabled:opacity-60 cursor-pointer"
                 style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}
               >
-                <Save size={15} /> {saving ? "Menyimpan..." : (editId ? "Update Data" : "Simpan")}
+                <Save size={15} aria-hidden="true" /> {saving ? "Menyimpan..." : (editId ? "Update Data" : "Simpan")}
               </button>
-              <button onClick={() => setShowForm(false)} className="px-4 py-2.5 rounded-xl border text-sm font-medium text-gray-600 hover:bg-gray-50" style={{ borderColor: "#e5e7eb" }}>Batal</button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2.5 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50 cursor-pointer"
+              >
+                Batal
+              </button>
             </div>
           </div>
         )}
 
         {/* Daftar Pengajar */}
         {loading ? (
-          <div className="text-center py-16 text-gray-400">Memuat data...</div>
-        ) : list.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border p-12 text-center" style={{ borderColor: "#f0f0f0" }}>
-            <User size={40} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500 font-medium">Belum ada data pengajar.</p>
-            <p className="text-sm text-gray-400 mt-1">Klik tombol "Tambah Pengajar" untuk menambahkan data pertama.</p>
+          <div className="text-center py-16 text-stone-500">Memuat data pengajar...</div>
+        ) : filteredList.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-xs border border-stone-200 p-12 text-center">
+            <User size={40} className="mx-auto text-stone-300 mb-3" aria-hidden="true" />
+            <p className="text-stone-700 font-semibold">
+              {list.length === 0 ? "Belum ada data pengajar." : "Tidak ada pengajar yang cocok dengan pencarian."}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {list.map(p => {
+            {filteredList.map(p => {
               const formattedName = formatNamaGelar(p);
               return (
-                <div key={p.id} className="bg-white rounded-2xl shadow-sm border p-4 flex items-center gap-4" style={{ borderColor: "#f0f0f0" }}>
-                  {p.foto_url ? (
-                    <img src={p.foto_url} alt={p.nama} className="w-12 h-12 rounded-xl object-cover object-center border border-gray-200 shrink-0" />
-                  ) : (
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}>
-                      {p.nama.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
+                <div
+                  key={p.id}
+                  className="bg-white rounded-2xl shadow-xs border border-stone-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    {p.foto_url ? (
+                      <img src={p.foto_url} alt={formattedName} className="w-12 h-12 rounded-xl object-cover object-center border border-stone-200 shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0" style={{ background: `linear-gradient(135deg, ${primary}, #1a6b2b)` }}>
+                        {p.nama.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-sm text-stone-900">{formattedName}</p>
+                        {p.is_pimpinan && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0" style={{ background: `${accent}24`, color: "#785c15" }}>
+                            Pimpinan
+                          </span>
+                        )}
+                        {!p.is_aktif && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-stone-100 text-stone-600 shrink-0">
+                            Tersembunyi
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-stone-600 mt-0.5">
+                        {p.jabatan}{p.bidang_studi ? ` · ${p.bidang_studi}` : ""}
+                      </p>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-bold text-sm text-gray-900 truncate">{formattedName}</p>
-                      {p.is_pimpinan && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{ background: `${accent}20`, color: "#8a6b1e" }}>Pimpinan</span>}
-                      {!p.is_aktif && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-500">Tersembunyi</span>}
-                    </div>
-                    <p className="text-xs text-gray-500 truncate">{p.jabatan}{p.bidang_studi ? ` · ${p.bidang_studi}` : ""}</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+
+                  <div className="flex items-center justify-end gap-2 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-stone-100 shrink-0">
                     {p.foto_url && (
                       <button
+                        type="button"
                         onClick={() => handleQuickCropFromList(p)}
-                        title="Atur Ulang / Crop Foto Pengajar Ini"
-                        className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors border border-emerald-200"
+                        aria-label={`Atur ulang crop foto ${formattedName}`}
+                        className="p-2 rounded-xl text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer"
                       >
-                        <Crop size={16} />
+                        <Crop size={15} aria-hidden="true" />
                       </button>
                     )}
-                    <button onClick={() => toggleAktif(p)} title="Toggle tampil" className="text-gray-400 hover:text-green-600">
-                      {p.is_aktif ? <ToggleRight size={22} className="text-green-500" /> : <ToggleLeft size={22} />}
+                    <button
+                      type="button"
+                      onClick={() => toggleAktif(p)}
+                      aria-label={p.is_aktif ? `Sembunyikan ${formattedName}` : `Tampilkan ${formattedName}`}
+                      className="p-1.5 rounded-xl text-stone-500 hover:text-emerald-700 hover:bg-stone-100 cursor-pointer"
+                    >
+                      {p.is_aktif ? <ToggleRight size={22} className="text-emerald-700" aria-hidden="true" /> : <ToggleLeft size={22} aria-hidden="true" />}
                     </button>
-                    <button onClick={() => startEdit(p)} className="text-gray-400 hover:text-blue-600"><Edit2 size={16} /></button>
-                    <button onClick={() => hapus(p.id!)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(p)}
+                      aria-label={`Edit data ${formattedName}`}
+                      className="p-2 rounded-xl text-stone-700 bg-stone-100 hover:bg-stone-200 cursor-pointer"
+                    >
+                      <Edit2 size={15} aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => hapus(p.id!)}
+                      aria-label={`Hapus ${formattedName}`}
+                      className="p-2 rounded-xl text-red-600 bg-red-50 hover:bg-red-100 cursor-pointer"
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
                   </div>
                 </div>
               );
             })}
           </div>
         )}
-      </div>
+      </main>
 
       {/* Modal Editor Foto Gaya Media Sosial */}
       <PhotoCropModal
