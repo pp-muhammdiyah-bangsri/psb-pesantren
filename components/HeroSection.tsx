@@ -107,10 +107,10 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
         style={{ background: `linear-gradient(90deg, transparent, ${theme.accent}, transparent)` }}
       />
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-x-10 lg:gap-y-5 items-start">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-14 sm:pt-7 sm:pb-16 lg:py-12 flex-1 flex flex-col justify-between lg:flex-none">
+        <div className="flex-1 flex flex-col justify-between gap-4 lg:grid lg:grid-cols-12 lg:gap-x-10 lg:gap-y-5 lg:items-start">
           {/* 1. Status + Headline + Tagline */}
-          <div className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3 sm:space-y-4 lg:pt-4">
+          <div className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left space-y-2.5 sm:space-y-3.5 lg:pt-4">
             {activeGelombang ? (
               <div
                 className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold tracking-wide"
@@ -146,9 +146,9 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
           </div>
 
           {/* 2. Dua Kartu Foto Berbentuk Huruf V (Seperti Kartu Poker Dipegang Tangan) */}
-          <div className="lg:col-span-6 lg:row-span-2 lg:col-start-7 lg:row-start-1 lg:self-start lg:-mt-2 flex justify-center">
+          <div className="lg:col-span-6 lg:row-span-2 lg:col-start-7 lg:row-start-1 lg:self-start lg:-mt-2 flex justify-center items-center my-auto lg:my-0">
             <div
-              className="relative w-[305px] sm:w-[375px] lg:w-[490px] xl:w-[560px] h-[220px] sm:h-[275px] lg:h-[370px] xl:h-[420px]"
+              className="relative w-[345px] sm:w-[420px] lg:w-[490px] xl:w-[560px] h-[272px] sm:h-[325px] lg:h-[370px] xl:h-[420px]"
               aria-label={`Galeri foto utama ${nama}`}
             >
               {/* Kartu Kiri (Miring ke kiri membentuk sisi kiri huruf V) */}
@@ -156,7 +156,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                 type="button"
                 onClick={() => setFrontSide("left")}
                 aria-label="Tampilkan kartu foto pertama ke depan"
-                className={`group absolute left-1/2 bottom-2 w-[166px] sm:w-[208px] lg:w-[270px] xl:w-[305px] aspect-[3/3.45] origin-bottom rounded-2xl p-1.5 sm:p-2 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[68%] -rotate-[10deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-rotate-[12deg] motion-safe:hover:-translate-y-1.5 ${
+                className={`group absolute left-1/2 bottom-2 w-[202px] sm:w-[242px] lg:w-[270px] xl:w-[305px] aspect-[3/3.45] origin-bottom rounded-2xl p-1.5 sm:p-2 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[63%] -rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
                   !isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
                 }`}
                 style={{
@@ -220,7 +220,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                 type="button"
                 onClick={() => setFrontSide("right")}
                 aria-label="Tampilkan kartu foto utama ke depan"
-                className={`group absolute left-1/2 bottom-2 w-[166px] sm:w-[208px] lg:w-[270px] xl:w-[305px] aspect-[3/3.45] origin-bottom rounded-2xl p-1.5 sm:p-2 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[32%] rotate-[10deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:rotate-[12deg] motion-safe:hover:-translate-y-1.5 ${
+                className={`group absolute left-1/2 bottom-2 w-[202px] sm:w-[242px] lg:w-[270px] xl:w-[305px] aspect-[3/3.45] origin-bottom rounded-2xl p-1.5 sm:p-2 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[37%] rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
                   isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
                 }`}
                 style={{
@@ -271,7 +271,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
           </div>
 
           {/* 3. Unified Glass Stats Strip */}
-          <div className="lg:col-span-6">
+          <div className="w-full lg:col-span-6">
             <div className="grid grid-cols-3 divide-x divide-white/15 rounded-xl bg-white/[0.06] border border-white/15 py-2 sm:py-2.5 max-w-[420px] mx-auto lg:mx-0">
               {stats.map(({ icon: Icon, label, value }) => (
                 <div key={label} className="px-2.5 sm:px-4 text-center lg:text-left">
