@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Calendar, Users, BookOpen, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Calendar, Users, BookOpen, Sparkles, Pause, Play } from "lucide-react";
 import { toDirectImageUrl, parseMediaUrl } from "@/lib/mediaUtils";
 import { buildPsbTheme } from "@/lib/themeUtils";
 
@@ -20,42 +20,66 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
   const [leftImgError, setLeftImgError] = useState(false);
   const [rightImgError, setRightImgError] = useState(false);
   const [frontSide, setFrontSide] = useState<"right" | "left">("right");
+  const [typingPaused, setTypingPaused] = useState(false);
+  const typedTextRef = useRef<HTMLSpanElement>(null);
 
   const theme = buildPsbTheme(config);
   const nama = config.nama_pesantren || "Pondok Pesantren";
   const tagline = config.tagline || "Pinter Ngaji, Akhlak Terpuji, Berprestasi";
-  const [typedCount, setTypedCount] = useState(0);
-  const [showCaret, setShowCaret] = useState(true);
 
   useEffect(() => {
-    if (
+    const el = typedTextRef.current;
+    if (!el) return;
+
+    const reducedMotion =
       typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      setTypedCount(tagline.length);
-      setShowCaret(false);
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (reducedMotion || typingPaused || tagline.length === 0) {
+      el.textContent = tagline;
       return;
     }
 
-    setTypedCount(0);
-    setShowCaret(true);
-    let hideTimeout: number | undefined;
-    const typeInterval = window.setInterval(() => {
-      setTypedCount((prev) => {
-        if (prev >= tagline.length) {
-          window.clearInterval(typeInterval);
-          hideTimeout = window.setTimeout(() => setShowCaret(false), 1200);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 52);
+    const typeMsPerChar = 90;
+    const holdFullMs = 2500;
+    const eraseMsPerChar = 38;
+    const holdEmptyMs = 450;
 
-    return () => {
-      window.clearInterval(typeInterval);
-      if (hideTimeout) window.clearTimeout(hideTimeout);
+    const typeDuration = tagline.length * typeMsPerChar;
+    const eraseDuration = tagline.length * eraseMsPerChar;
+    const cycleMs = typeDuration + holdFullMs + eraseDuration + holdEmptyMs;
+
+    let rafId = 0;
+    let startTs: number | null = null;
+    let lastCount = -1;
+
+    const tick = (now: number) => {
+      if (startTs === null) startTs = now;
+      const elapsed = (now - startTs) % cycleMs;
+
+      let nextCount = 0;
+      if (elapsed < typeDuration) {
+        nextCount = Math.floor(elapsed / typeMsPerChar);
+      } else if (elapsed < typeDuration + holdFullMs) {
+        nextCount = tagline.length;
+      } else if (elapsed < typeDuration + holdFullMs + eraseDuration) {
+        const eraseElapsed = elapsed - typeDuration - holdFullMs;
+        nextCount = Math.max(0, tagline.length - Math.floor(eraseElapsed / eraseMsPerChar));
+      } else {
+        nextCount = 0;
+      }
+
+      if (nextCount !== lastCount) {
+        lastCount = nextCount;
+        el.textContent = tagline.slice(0, nextCount);
+      }
+
+      rafId = window.requestAnimationFrame(tick);
     };
-  }, [tagline]);
+
+    rafId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(rafId);
+  }, [tagline, typingPaused]);
   const videoMedia = config.video_profil_url ? parseMediaUrl(config.video_profil_url) : null;
 
   // Resolve 2 foto berbeda untuk kartu kiri & kartu kanan berbentuk V
@@ -173,22 +197,38 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
               {nama}
             </h1>
 
-            {/* Animasi Ketik Jargon Pondok (CLS = 0) */}
-            <p className="relative text-sm sm:text-lg lg:text-xl font-medium text-white/90 max-w-2xl leading-relaxed">
-              <span className="sr-only">{tagline}</span>
-              <span aria-hidden="true" className="invisible select-none">
-                {tagline}
-              </span>
-              <span aria-hidden="true" className="absolute inset-0">
-                {tagline.slice(0, typedCount)}
-                {showCaret && (
+            {/* Animasi Ketik 60 FPS Loop Halus Tanpa Re-render (CLS = 0) */}
+            <div className="flex items-start justify-center lg:justify-start gap-2.5 max-w-2xl">
+              <p className="relative text-sm sm:text-base lg:text-lg xl:text-xl font-medium text-white/95 leading-relaxed">
+                <span className="sr-only">{tagline}</span>
+                <span aria-hidden="true" className="invisible select-none">
+                  {tagline}
+                  <span className="inline-block w-[3px] ml-0.5" />
+                </span>
+                <span aria-hidden="true" className="absolute inset-0">
+                  <span ref={typedTextRef} />
                   <span
-                    className="psb-jargon-caret inline-block w-[2px] h-[1.05em] align-[-0.14em] ml-0.5 rounded-full"
+                    className={`inline-block w-[2px] h-[1.05em] align-[-0.14em] ml-0.5 rounded-full ${
+                      typingPaused ? "opacity-0" : "psb-jargon-caret"
+                    }`}
                     style={{ backgroundColor: theme.accentLight }}
                   />
+                </span>
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setTypingPaused((p) => !p)}
+                aria-label={typingPaused ? "Putar animasi ketik jargon" : "Jeda animasi ketik jargon"}
+                className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full border border-white/15 bg-white/[0.06] text-white/60 hover:text-white hover:bg-white/15 transition-colors shrink-0 cursor-pointer"
+              >
+                {typingPaused ? (
+                  <Play size={10} className="fill-current translate-x-[0.5px]" aria-hidden="true" />
+                ) : (
+                  <Pause size={10} aria-hidden="true" />
                 )}
-              </span>
-            </p>
+              </button>
+            </div>
           </div>
 
           {/* 2. Dua Kartu Foto Berbentuk Huruf V (Seperti Kartu Poker Dipegang Tangan) */}
