@@ -80,7 +80,7 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
 
   return (
     <section
-      className="relative overflow-hidden text-white"
+      className="relative overflow-hidden text-white min-h-[calc(100svh-4rem)] sm:min-h-[calc(100svh-4.5rem)] flex flex-col justify-center"
       style={{
         background: `linear-gradient(155deg, ${theme.primaryDark} 0%, ${theme.primary} 55%, ${theme.primaryDark} 100%)`,
       }}
@@ -100,14 +100,14 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
         <rect width="100%" height="100%" fill="url(#psb-lattice)" />
       </svg>
 
-      {/* Garis aksen tipis di atas */}
+      {/* Garis aksen tipis di top bar */}
       <div
         aria-hidden="true"
-        className="h-0.5 w-full"
+        className="absolute top-0 inset-x-0 h-0.5"
         style={{ background: `linear-gradient(90deg, transparent, ${theme.accent}, transparent)` }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-10">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-x-10 lg:gap-y-5 items-start">
           {/* 1. Status + Headline + Tagline */}
           <div className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3 sm:space-y-4 lg:pt-4">
@@ -258,10 +258,10 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
                   )}
                   <div
                     aria-hidden="true"
-                    className="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/70 via-black/25 to-transparent"
+                    className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/75 via-black/30 to-transparent"
                   />
-                  <div className="absolute bottom-2.5 left-3 right-3">
-                    <span className="inline-block max-w-full truncate px-2.5 py-1 rounded-full bg-black/45 border border-white/20 text-[11px] sm:text-xs font-semibold text-white">
+                  <div className="absolute bottom-2 left-2 right-2 flex justify-center sm:justify-start">
+                    <span className="inline-block max-w-full px-2.5 py-1 rounded-xl sm:rounded-full bg-black/55 border border-white/20 text-[10px] sm:text-xs font-semibold leading-snug text-center sm:text-left text-white line-clamp-2">
                       {config.hero_foto_caption || "Suasana Pondok Pesantren"}
                     </span>
                   </div>

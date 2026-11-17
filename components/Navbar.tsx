@@ -82,17 +82,28 @@ export default function Navbar({ config }: NavbarProps) {
             </Link>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            aria-controls="mobile-nav"
-            aria-label={open ? "Tutup menu navigasi" : "Buka menu navigasi"}
-            className="lg:hidden inline-flex items-center justify-center min-w-11 min-h-11 rounded-xl text-white hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            {open ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
-          </button>
+          {/* Mobile Quick Daftar CTA + Menu Toggle */}
+          <div className="flex items-center gap-1.5 lg:hidden shrink-0">
+            <Link
+              href="/daftar"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full font-bold text-xs shadow-sm transition-transform active:scale-95"
+              style={{ backgroundColor: theme.accent, color: theme.onAccent }}
+            >
+              <span>Daftar</span>
+              <ArrowUpRight size={13} aria-hidden="true" />
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              aria-expanded={open}
+              aria-controls="mobile-nav"
+              aria-label={open ? "Tutup menu navigasi" : "Buka menu navigasi"}
+              className="inline-flex items-center justify-center min-w-10 min-h-10 rounded-xl text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              {open ? <X size={21} aria-hidden="true" /> : <Menu size={21} aria-hidden="true" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Drawer */}
