@@ -1,8 +1,34 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { Calendar, Users, BookOpen, Sparkles } from "lucide-react";
 import { toDirectImageUrl, parseMediaUrl } from "@/lib/mediaUtils";
 import { buildPsbTheme } from "@/lib/themeUtils";
+
+const MOBILE_ZOOM_DURATION_MS = 5000;
+
+function getHeroCardClasses(
+  side: "left" | "right",
+  zoomedSide: "left" | "right" | null,
+  isFront: boolean
+): string {
+  const base =
+    "group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[280px] xl:w-[310px] aspect-[3/4.25] lg:aspect-[3/3.72] xl:aspect-[3/3.78] origin-[50%_62%] rounded-2xl p-[3px] sm:p-1 bg-white/95 border cursor-pointer text-left transition-all duration-300 ease-out";
+
+  if (zoomedSide === side) {
+    return `${base} z-30 -translate-x-1/2 rotate-0 scale-[1.12] sm:scale-[1.14] lg:scale-[1.13] xl:scale-[1.14] shadow-[0_24px_60px_rgba(0,0,0,0.48)]`;
+  }
+
+  const restingPose =
+    side === "left"
+      ? "-translate-x-[61%] -rotate-[8deg] lg:-translate-x-[63%] lg:-rotate-[9deg]"
+      : "-translate-x-[39%] rotate-[8deg] lg:-translate-x-[37%] lg:rotate-[9deg]";
+
+  if (zoomedSide !== null) {
+    return `${base} ${restingPose} z-10 scale-95 opacity-75 shadow-xl`;
+  }
+
+  return `${base} ${restingPose} shadow-2xl ${isFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"}`;
+}
 
 interface HeroGaleriItem {
   id: number;
@@ -36,7 +62,114 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
   const [leftImgError, setLeftImgError] = useState(false);
   const [rightImgError, setRightImgError] = useState(false);
   const [frontSide, setFrontSide] = useState<"right" | "left">("right");
+  const [hoveredSide, setHoveredSide] = useState<"left" | "right" | null>(null);
+  const [timedZoomSide, setTimedZoomSide] = useState<"left" | "right" | null>(null);
   const typedTextRef = useRef<HTMLSpanElement>(null);
+  const lastPointerTypeRef = useRef<string>("mouse");
+  const hoverEnterRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const zoomTimerRef = useRef<number | null>(null);
+  const leftCardRef = useRef<HTMLButtonElement>(null);
+  const rightCardRef = useRef<HTMLButtonElement>(null);
+
+  const zoomedSide = hoveredSide ?? timedZoomSide;
+
+  useEffect(() => {
+    return () => {
+      if (zoomTimerRef.current !== null) {
+        window.clearTimeout(zoomTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hoveredSide) return;
+    const cardEl = hoveredSide === "left" ? leftCardRef.current : rightCardRef.current;
+    if (!cardEl) return;
+
+    const handleWindowPointerMove = (ev: globalThis.PointerEvent) => {
+      if (ev.pointerType !== "mouse") return;
+      const enter = hoverEnterRef.current;
+      if (enter && performance.now() - enter.time < 380) return;
+
+      const rect = cardEl.getBoundingClientRect();
+      if (
+        ev.clientX < rect.left ||
+        ev.clientX > rect.right ||
+        ev.clientY < rect.top ||
+        ev.clientY > rect.bottom
+      ) {
+        setHoveredSide(null);
+      }
+    };
+
+    window.addEventListener("pointermove", handleWindowPointerMove, { passive: true });
+    return () => window.removeEventListener("pointermove", handleWindowPointerMove);
+  }, [hoveredSide]);
+
+  const clearTimedZoom = () => {
+    if (zoomTimerRef.current !== null) {
+      window.clearTimeout(zoomTimerRef.current);
+      zoomTimerRef.current = null;
+    }
+  };
+
+  const handleCardPointerDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    lastPointerTypeRef.current = e.pointerType || "mouse";
+  };
+
+  const handleCardPointerEnter = (
+    side: "left" | "right",
+    e: ReactPointerEvent<HTMLButtonElement>
+  ) => {
+    if (e.pointerType !== "mouse") return;
+    clearTimedZoom();
+    setTimedZoomSide(null);
+    hoverEnterRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      time: performance.now(),
+    };
+    setHoveredSide(side);
+  };
+
+  const handleCardPointerLeave = (
+    side: "left" | "right",
+    e: ReactPointerEvent<HTMLButtonElement>
+  ) => {
+    if (e.pointerType !== "mouse") return;
+    const enter = hoverEnterRef.current;
+    if (enter) {
+      const dt = performance.now() - enter.time;
+      const dist = Math.hypot(e.clientX - enter.x, e.clientY - enter.y);
+      // Cegah flick jika kartu bergeser menjauhi kursor diam selama animasi pelurusan 300ms
+      if (dt < 380 && dist < 10) return;
+    }
+    setHoveredSide((prev) => (prev === side ? null : prev));
+  };
+
+  const handleCardClick = (side: "left" | "right") => {
+    setFrontSide(side);
+
+    const isHoverCapableMouse =
+      lastPointerTypeRef.current === "mouse" &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+    if (isHoverCapableMouse) return;
+
+    clearTimedZoom();
+    setHoveredSide(null);
+    if (timedZoomSide === side) {
+      setTimedZoomSide(null);
+      return;
+    }
+
+    setTimedZoomSide(side);
+    zoomTimerRef.current = window.setTimeout(() => {
+      setTimedZoomSide(null);
+      zoomTimerRef.current = null;
+    }, MOBILE_ZOOM_DURATION_MS);
+  };
 
   const theme = buildPsbTheme(config);
   const nama = config.nama_pesantren || "Pondok Pesantren";
@@ -228,14 +361,19 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
             >
               {/* Kartu Kiri (Miring ke kiri membentuk sisi kiri huruf V) */}
               <button
+                ref={leftCardRef}
                 type="button"
-                onClick={() => setFrontSide("left")}
+                onPointerDown={handleCardPointerDown}
+                onPointerEnter={(e) => handleCardPointerEnter("left", e)}
+                onPointerLeave={(e) => handleCardPointerLeave("left", e)}
+                onClick={() => handleCardClick("left")}
                 aria-label="Tampilkan kartu foto pertama ke depan"
-                className={`group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[280px] xl:w-[310px] aspect-[3/4.25] lg:aspect-[3/3.72] xl:aspect-[3/3.78] origin-bottom rounded-2xl p-[3px] sm:p-1 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[61%] -rotate-[8deg] lg:-translate-x-[63%] lg:-rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:-rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
-                  !isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
-                }`}
+                className={getHeroCardClasses("left", zoomedSide, !isRightFront)}
                 style={{
-                  borderColor: !isRightFront ? theme.accent : "rgba(255,255,255,0.75)",
+                  borderColor:
+                    zoomedSide === "left" || (zoomedSide === null && !isRightFront)
+                      ? theme.accent
+                      : "rgba(255,255,255,0.75)",
                 }}
               >
                 <div className="relative w-full h-full rounded-[13px] overflow-hidden bg-stone-900">
@@ -284,14 +422,19 @@ export default function HeroSection({ config, gelombang, galeri = [] }: HeroProp
 
               {/* Kartu Kanan (Miring ke kanan membentuk sisi kanan huruf V) */}
               <button
+                ref={rightCardRef}
                 type="button"
-                onClick={() => setFrontSide("right")}
+                onPointerDown={handleCardPointerDown}
+                onPointerEnter={(e) => handleCardPointerEnter("right", e)}
+                onPointerLeave={(e) => handleCardPointerLeave("right", e)}
+                onClick={() => handleCardClick("right")}
                 aria-label="Tampilkan kartu foto utama ke depan"
-                className={`group absolute left-1/2 bottom-1.5 w-[216px] sm:w-[248px] lg:w-[280px] xl:w-[310px] aspect-[3/4.25] lg:aspect-[3/3.72] xl:aspect-[3/3.78] origin-bottom rounded-2xl p-[3px] sm:p-1 bg-white/95 border shadow-2xl cursor-pointer text-left -translate-x-[39%] rotate-[8deg] lg:-translate-x-[37%] lg:rotate-[9deg] motion-safe:transition-all motion-safe:duration-300 motion-safe:hover:rotate-[11deg] motion-safe:hover:-translate-y-1.5 ${
-                  isRightFront ? "z-20 scale-[1.03]" : "z-10 opacity-95"
-                }`}
+                className={getHeroCardClasses("right", zoomedSide, isRightFront)}
                 style={{
-                  borderColor: isRightFront ? theme.accent : "rgba(255,255,255,0.75)",
+                  borderColor:
+                    zoomedSide === "right" || (zoomedSide === null && isRightFront)
+                      ? theme.accent
+                      : "rgba(255,255,255,0.75)",
                 }}
               >
                 <div className="relative w-full h-full rounded-[13px] overflow-hidden bg-stone-900">
